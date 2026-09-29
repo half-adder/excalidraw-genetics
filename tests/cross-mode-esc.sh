@@ -10,6 +10,7 @@ T.empty();
 const ea = F.view();
 const api = ea.targetView.excalidrawAPI;
 const prevColor = api.getAppState().currentItemStrokeColor;
+const prevLocked = !!api.getAppState().activeTool.locked;
 await T.run('Cross Mode');
 if (!window._flyCrossMode) throw new Error('Cross Mode did not turn on');
 // Cross Mode arms the line tool with setActiveTool, which lands on a later render.
@@ -21,11 +22,11 @@ const c = ea.targetView.contentEl.querySelector('.excalidraw');
 let st, off, toolOk, colorOk;
 for (let i = 0; i < 150; i++) {
   st = api.getAppState(); off = !window._flyCrossMode;
-  toolOk = !(st.activeTool.type === 'line' && st.activeTool.locked);
+  toolOk = st.activeTool.type === 'selection' && !!st.activeTool.locked === prevLocked;
   colorOk = st.currentItemStrokeColor === prevColor;
   if (off && toolOk && colorOk) break;
   await new Promise(r => setTimeout(r, 20));
 }
-const msg = 'after Esc mode ' + (off ? 'off' : 'ON') + ', tool ' + st.activeTool.type + (st.activeTool.locked ? ' (locked)' : '') + ', stroke ' + (colorOk ? 'restored' : 'still ' + st.currentItemStrokeColor);
+const msg = 'after Esc mode ' + (off ? 'off' : 'ON') + ', tool ' + st.activeTool.type + (st.activeTool.locked ? ' (locked)' : '') + (prevLocked ? ', lock was on before' : '') + ', stroke ' + (colorOk ? 'restored' : 'still ' + st.currentItemStrokeColor);
 T.pass(off && toolOk && colorOk, msg, msg);
 JS

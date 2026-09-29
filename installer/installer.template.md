@@ -6,8 +6,9 @@ Genotypes, Cross Mode, Tidy, Tidy Below, Select Lineage, Select Below, Break
 Cross, Update Fly Genetics) and the Computer Modern font they draw with.
 
 To install: put this file in your Excalidraw script folder (Settings ->
-Excalidraw -> Excalidraw Automate -> Script folder; default
-Excalidraw/Scripts), then run "Install Fly Genetics" from the command palette.
+Excalidraw -> Basic -> Files and folders -> Excalidraw Automate script folder;
+default Excalidraw/Scripts), then run "Install Fly Genetics" from the command
+palette.
 
 What it does:
   1. Writes the scripts into the script folder. Scripts you have not edited are

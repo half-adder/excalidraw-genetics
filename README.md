@@ -22,6 +22,10 @@ Each genotype is drawn as native Excalidraw elements (allele text, fraction line
 
 ![Tidy a scrambled pedigree, then Tidy Below on one branch](docs/media/tidy.gif)
 
+**Select Below** picks a genotype with everything below it (descendants, their mates, and the arrows and labels between them); drag it anywhere and the arrow from its parents follows.
+
+![Select Below, then drag the sub-lineage](docs/media/select-move.gif)
+
 **Break Cross**: detach an offspring (or break a whole cross) without deleting any genotype; one undo brings it back.
 
 ![Break Cross, then undo](docs/media/break-cross.gif)
@@ -32,7 +36,7 @@ Each genotype is drawn as native Excalidraw elements (allele text, fraction line
 |---|---|
 | `Genotype` | Form for creating or editing one genotype: sex-symbol column plus a text field per homolog, laid out like the genotype (`X ; II ; III`, top over bottom). With a genotype selected it edits it in place (one undo step); for an offspring it also edits its label and selection criterion. With nothing selected it creates one at the nearest free spot to the view center. See `docs/plans/2026-09-28-genotype-form-editor-design.md`. |
 | `Cross Genotypes` | Select two genotypes and pick the offspring: one card per maternal × paternal homolog pair for each chromosome, with the offspring sex linked to the X card (`Y` = male, XX = female, "or Y" = both sexes), a live preview, and optional label and multi-line selection criterion. Draws the offspring, the `x`, a bound elbow lineage arrow (the criterion rides on it as an arrow label), then runs Tidy. See `docs/plans/2026-09-28-cross-picker-design.md`. |
-| `Cross Mode` | Toggle a quick-crossing mode: draw a red dashed line between two genotypes to cross them. An end in empty space creates a new genotype there first; empty to empty starts a new lineage. Esc (or cancelling the Genotype form) leaves the mode. |
+| `Cross Mode` | Toggle a quick-crossing mode: draw a red dashed line between two genotypes to cross them. An end in empty space creates a new genotype there first; empty to empty starts a new lineage. The mode turns off once the offspring is created; Esc (or cancelling the Genotype form) leaves it early. |
 | `Tidy` | Lays out crosses: parents side by side with the `x` between them, offspring below, no overlaps. Nothing selected: every lineage. One genotype selected: its whole lineage. Several selected: exactly those, with everything else held still. Moves things as little as possible and keeps siblings in the order you placed them. |
 | `Tidy Below` | Tidies the selected genotype and everything below it (its descendants and their mates); everything above stays put. |
 | `Select Lineage` / `Select Below` | Select a genotype's whole lineage, or it and everything below it, with the `x` glyphs, arrows and labels in between, ready to drag. |
@@ -45,7 +49,7 @@ All scripts live in `scripts/` and run from the command palette. Suggested hotke
 
 1. In Obsidian, install and enable the **Excalidraw** community plugin.
 2. Download `dist/Install Fly Genetics.md` (one file, about 1 MB).
-3. Put it in your Excalidraw script folder: Settings → Excalidraw → Excalidraw Automate → Script folder (default `Excalidraw/Scripts`).
+3. Put it in your Excalidraw script folder: Settings → Excalidraw → Basic → Files and folders → Excalidraw Automate script folder (default `Excalidraw/Scripts`).
 4. Open the command palette (Cmd/Ctrl+P) and run **Install Fly Genetics**.
 
 The installer writes the scripts into your script folder, writes the Computer Modern font (and its SIL Open Font License) to `Excalidraw/Fonts/`, and turns on Excalidraw's local font with it. It asks before replacing a different local font you already use. It does not touch hotkeys.

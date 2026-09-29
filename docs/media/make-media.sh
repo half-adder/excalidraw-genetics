@@ -13,7 +13,7 @@
 # frame, 2.5 s on the last, looping, one shared palette).
 set -euo pipefail
 MEDIA="$(cd "$(dirname "$0")" && pwd)"
-ALL=(genotype cross cross-mode tidy break-cross)
+ALL=(genotype cross cross-mode tidy break-cross select-move)
 if (( $# )); then GIFS=("$@"); else GIFS=("${ALL[@]}"); fi
 source "$MEDIA/../../tests/lib.sh" # cds to the vault; defines ev, fly_test
 
@@ -72,7 +72,12 @@ JS
   frames=("$src"/*.png)
   (( ${#frames[@]} >= 2 )) || { echo "FAIL: $gif has ${#frames[@]} frames"; exit 1; }
   rm -rf "$MEDIA/frames/$gif" && mkdir -p "$MEDIA/frames/$gif"
-  cp "${frames[@]}" "$MEDIA/frames/$gif/"
+  # review.txt (optional, from media.js) names the subset of frames to copy.
+  if [[ -f "$src/review.txt" ]]; then
+    while read -r f; do cp "$src/$f" "$MEDIA/frames/$gif/"; done <"$src/review.txt"
+  else
+    cp "${frames[@]}" "$MEDIA/frames/$gif/"
+  fi
 
   # All frames to one size (the first frame's; a frame that grew to cover a
   # modal is scaled down to fit and padded), then 800 px wide.
@@ -88,7 +93,15 @@ JS
   for f in "$src"/n/*.png; do printf "file '%s'\n" "$f" >>"$list"; done
   ffmpeg -v error -y -f concat -safe 0 -i "$list" -vf "palettegen=max_colors=128:stats_mode=full" -update 1 "$src/palette.png"
   n=("$src"/n/*.png)
-  magick -delay 120 "${n[@]:0:${#n[@]}-1}" -delay 250 "${n[@]: -1}" +dither -remap "$src/palette.png" \
+  # delays.txt (optional, from media.js): one delay per frame, in 1/100 s.
+  if [[ -f "$src/delays.txt" ]]; then
+    mapfile -t d <"$src/delays.txt"
+    (( ${#d[@]} == ${#n[@]} )) || { echo "FAIL: $gif: ${#d[@]} delays for ${#n[@]} frames"; exit 1; }
+    seq=(); for i in "${!n[@]}"; do seq+=(-delay "${d[i]}" "${n[i]}"); done
+  else
+    seq=(-delay 120 "${n[@]:0:${#n[@]}-1}" -delay 250 "${n[@]: -1}")
+  fi
+  magick "${seq[@]}" +dither -remap "$src/palette.png" \
     -layers optimize -loop 0 "$MEDIA/$gif.gif"
   echo "$gif.gif: ${#frames[@]} frames, $(du -k "$MEDIA/$gif.gif" | cut -f1) KB, delays $(magick identify -format '%T ' "$MEDIA/$gif.gif")"
 done

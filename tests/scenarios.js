@@ -16,7 +16,7 @@ window.__flyScenarios = (() => {
     // P1 x P2 -> A, B (siblings); A x P3 -> C, D; C x P4 -> E; then a full Tidy.
     'below': async T => {
       await founders(T);
-      await T.cross('A', 'P1', 'P2', { offspringGlyph: '♀', pick: { X: 0, II: 0, III: 0 }, labelText: 'A', criterionText: 'CyO' });
+      await T.cross('A', 'P1', 'P2', { offspringGlyph: '♀', pick: { X: 0, II: 2, III: 0 }, labelText: 'A', criterionText: 'CyO' });
       await T.cross('B', 'P1', 'P2', { offspringGlyph: '♂', pick: { X: 2, II: 3, III: 0 }, labelText: 'B' });
       await T.genotype('P3', { glyph: '♂', X: { top: 'yw', bottom: 'Y' }, II: { top: '', bottom: '' }, III: { top: 'MKRS', bottom: 'TM6B' } });
       await T.cross('C', 'A', 'P3', { offspringGlyph: '♀', pick: { X: 0, II: 0, III: 0 }, labelText: 'C' });
@@ -71,6 +71,18 @@ window.__flyScenarios = (() => {
       await founders(T);
       await T.cross('A', 'P1', 'P2', { offspringGlyph: null, pick: { X: 0, II: 0, III: 0 }, labelText: 'A' });
       await T.cross('B', 'P1', 'P2', { offspringGlyph: null, pick: { X: 2, II: 3, III: 0 }, labelText: 'B' });
+      await T.tidyAll();
+    },
+    // P1 x P2 -> A, B, C; A x P3 -> D, E; then a full Tidy (the select-move
+    // README animation).
+    'select-move': async T => {
+      await founders(T);
+      await T.cross('A', 'P1', 'P2', { offspringGlyph: '♀', pick: { X: 0, II: 2, III: 0 }, labelText: 'A', criterionText: 'CyO' });
+      await T.cross('B', 'P1', 'P2', { offspringGlyph: '♂', pick: { X: 2, II: 3, III: 0 }, labelText: 'B' });
+      await T.cross('C', 'P1', 'P2', { offspringGlyph: '♀', pick: { X: 1, II: 1, III: 0 }, labelText: 'C' });
+      await T.genotype('P3', { glyph: '♂', X: { top: 'yw', bottom: 'Y' }, II: { top: '', bottom: '' }, III: { top: 'MKRS', bottom: 'TM6B' } });
+      await T.cross('D', 'A', 'P3', { offspringGlyph: '♀', pick: { X: 0, II: 0, III: 0 }, labelText: 'D' });
+      await T.cross('E', 'A', 'P3', { offspringGlyph: '♀', pick: { X: 0, II: 0, III: 1 }, labelText: 'E', criterionText: 'TM6B' });
       await T.tidyAll();
     },
     // P1 x P2 -> F, made with a label and a selection criterion.

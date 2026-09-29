@@ -52,7 +52,7 @@ const check = (step, L, C) => {
   T.pass(!bad.length, step, step + ' (' + bad.join('; ') + ')');
 };
 check('cross made with label and criterion', 'F1-a', 'non-Cy');
-await edit('F1-b, a longer label', 'non-Cy\nSb/+'); check('label and criterion changed', 'F1-b, a longer label', 'non-Cy\nSb/+');
+await edit('F1-b, a longer label', 'non-Cy\nGla'); check('label and criterion changed', 'F1-b, a longer label', 'non-Cy\nGla');
 await edit('', ''); check('label and criterion cleared', '', '');
-await edit('F1-c', 'Cy'); check('label and criterion added back', 'F1-c', 'Cy');
+await edit('F1-c', 'Sp'); check('label and criterion added back', 'F1-c', 'Sp');
 JS

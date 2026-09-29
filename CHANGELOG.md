@@ -2,6 +2,12 @@
 
 Versions are release dates (`YYYY.M.D`, with `.2`, `.3` for more releases on the same day).
 
+## 2026.9.29.3
+
+- Cross Mode is one-shot: it turns off once the offspring is created (cancelling the picker keeps it on to try again).
+- Leaving Cross Mode no longer leaves Excalidraw's tool lock switched on.
+- README: illustrated tour, including selecting a sub-lineage and dragging it; corrected path to the script folder setting.
+
 ## 2026.9.29.2
 
 - Versions are now dates, and "Update Fly Genetics" shows what changed.

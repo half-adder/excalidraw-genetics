@@ -144,8 +144,18 @@ window.__flyMedia = (() => {
 
     const cleanup = () => { view.contentEl.classList.remove('fly-media'); style.remove(); };
     const dropLast = () => { fs.rmSync(out + '/' + String(n).padStart(2, '0') + '.png'); n--; };
+    // Optional per-frame timing and review subset, read by make-media.sh:
+    // delays.txt (one delay per frame, in 1/100 s) and review.txt (the frame
+    // files to copy to docs/media/frames/<gif>/). Without them every frame
+    // shows 1.2 s (2.5 s the last) and every frame is copied.
+    const count = () => n;
+    const writeMeta = (delays, review) => {
+      if (delays.length !== n) throw new Error(delays.length + ' delays for ' + n + ' frames');
+      fs.writeFileSync(out + '/delays.txt', delays.join('\n') + '\n');
+      fs.writeFileSync(out + '/review.txt', review.map(i => String(i).padStart(2, '0') + '.png').join('\n') + '\n');
+    };
 
-    return { view, api, fit, shot, dropLast, cleanup, setInput, button, genoForm, picker, pickCard, geno, besides, selectGenos, undo, box };
+    return { view, api, fit, shot, dropLast, cleanup, setInput, button, genoForm, picker, pickCard, geno, besides, selectGenos, undo, box, count, writeMeta, container };
   }
 
   // ---- The animations ------------------------------------------------------
@@ -318,6 +328,151 @@ window.__flyMedia = (() => {
       await waitFor(() => lineage().length, 'undo to restore the arrow into A');
       F.deselect();
       await M.shot('after undo');
+    },
+
+    // Fixture select-move: P1 x P2 -> A, B, C; A x P3 -> D, E. Selects A, runs Select Below, then
+    // drags the selection with real pointer events on Excalidraw's interactive
+    // canvas (so Excalidraw moves it and re-routes the bound arrow into A
+    // itself), one frame per pointermove. Verifies the bindings after the drop.
+    async 'select-move'(T, F, M) {
+      await T.fixture('select-move');
+      T.setup(['P1', 'P2', 'A', 'B', 'C', 'P3', 'D', 'E']);
+      T.out(F.layout());
+      for (const g of ['A', 'D', 'E']) T.out(g + ': ' + F.els(g, 'genotype-allele').map(e => e.originalText).join(' '));
+      const api = M.api, N = window.__t;
+      const kind = k => F.live().filter(e => e.customData?.kind === k);
+      const frameOf = g => kind('genotype-frame').find(e => e.customData.genotypeId === g);
+      const glyphOf = (m, f) => kind('cross-glyph').find(e => e.customData.parents.maternal === m && e.customData.parents.paternal === f);
+      const arrowInto = g => F.live().filter(e => e.type === 'arrow' && e.customData?.kind === 'cross-lineage' && e.customData.childGenotypeId === g);
+
+      // The subtree Select Below should pick: A, P3, D, E and the furniture of
+      // the A x P3 cross.
+      const sub = ['A', 'P3', 'D', 'E'].map(n => N[n]);
+      const want = F.live().filter(e => {
+        const cd = e.customData;
+        if (cd?.genotypeId) return sub.includes(cd.genotypeId);
+        if (cd?.kind === 'cross-glyph') return cd.parents.maternal === N.A;
+        if (cd?.kind === 'cross-lineage' || cd?.kind === 'cross-criterion') return [N.D, N.E].includes(cd.childGenotypeId);
+        return false;
+      });
+
+      // The drag: the subtree of A ends up (DX, DY) scene px away, toward the
+      // side A sits on; on the way it dips DIP px lower. Excalidraw elbows the
+      // dropped arrow into A down from the x, across halfway between the x
+      // and A, then down into A; the first leg runs through the middle sibling
+      // unless the crossing lies above A's old row, so DY keeps it 30 px above
+      // that row. DX is a share of the pedigree's width (so the move reads the
+      // same at any zoom), and DIP is what makes the area the drag sweeps as
+      // tall as the crop box's shape asks for (within bounds).
+      // Visible extent (frames are drawn only while selected; the subtree's
+      // box keeps them, as it is selected while it moves).
+      const all = F.view().getBoundingBox(F.live().filter(e => e.customData?.kind !== 'genotype-frame'));
+      const sb = F.view().getBoundingBox(want);
+      const a0 = frameOf(N.A), x0 = glyphOf(N.P1, N.P2);
+      const left = a0.x + a0.width / 2 < all.topX + all.width / 2;
+      const rowTop = Math.min(...kind('genotype-frame').filter(f => f.y < a0.y + a0.height && f.y + f.height > a0.y).map(f => f.y));
+      const DX = (left ? -1 : 1) * Math.round(0.2 * all.width);
+      const DY = Math.max(0, Math.floor(2 * (rowTop - 30) - (x0.y + x0.height) - a0.y));
+      const MARGIN = 36; // CSS px around the swept area (selection handles)
+      // Union of the pedigree and the subtree at every point of the path.
+      const swept = dip => {
+        let x1 = all.topX, y1 = all.topY, x2 = all.topX + all.width, y2 = all.topY + all.height;
+        for (let i = 0; i <= 40; i++) {
+          const t = i / 40, px = DX * t, py = DY * t + dip * Math.sin(Math.PI * t);
+          x1 = Math.min(x1, sb.topX + px); x2 = Math.max(x2, sb.topX + sb.width + px);
+          y1 = Math.min(y1, sb.topY + py); y2 = Math.max(y2, sb.topY + sb.height + py);
+        }
+        return { topX: x1, topY: y1, width: x2 - x1, height: y2 - y1 };
+      };
+      const c = M.box(), aspect = (c.h - 2 * MARGIN) / (c.w - 2 * MARGIN);
+      let DIP = Math.round(0.15 * all.height);
+      while (DIP < 0.8 * all.height && swept(DIP).height < swept(DIP).width * aspect) DIP += 5;
+      const path = t => [DX * t, DY * t + DIP * Math.sin(Math.PI * t)];
+      const room = swept(DIP);
+      T.out('drag: DX ' + DX + ', DY ' + DY + ', DIP ' + DIP + ', swept ' + [room.width, room.height].map(Math.round));
+      F.deselect();
+      await M.fit(null, { b: room, maxZoom: 4, margin: MARGIN });
+      T.out('zoom ' + api.getAppState().zoom.value.toFixed(3));
+      await M.shot('pedigree');
+      M.selectGenos(['A']);
+      await M.shot('A selected');
+      window._flySelectResult = undefined;
+      await T.run('Select Below');
+      const sel = () => { const s = api.getAppState().selectedElementIds; return new Set(Object.keys(s).filter(k => s[k])); };
+      const into = arrowInto(N.A);
+      if (into.length !== 1) throw new Error(into.length + ' arrows into A');
+      const seedArrow = into[0];
+      const picked = sel();
+      if (picked.has(seedArrow.id)) throw new Error('Select Below selected the arrow into A');
+      const missing = want.filter(e => !picked.has(e.id)).map(e => e.customData.kind);
+      const extra = [...picked].filter(id => !want.some(e => e.id === id));
+      T.pass(!missing.length && !extra.length, 'Select Below selected the subtree of A (' + picked.size + ' elements), not the arrow into A',
+        'Select Below selection: missing ' + JSON.stringify(missing) + ', extra ' + extra.length);
+      await M.shot('after Select Below');
+
+      // Real drag: pointerdown on the center of one of A's alleles (selected),
+      // eased pointermoves, pointerup, dispatched on the interactive canvas.
+      const canvas = M.container().querySelector('canvas.interactive') ?? [...M.container().querySelectorAll('canvas')].at(-1);
+      const toClient = (sx, sy) => { const st = api.getAppState(), z = st.zoom.value; return [(sx + st.scrollX) * z + st.offsetLeft, (sy + st.scrollY) * z + st.offsetTop]; };
+      const allele = F.els('A', 'genotype-allele').find(e => picked.has(e.id));
+      const sx = allele.x + allele.width / 2, sy = allele.y + allele.height / 2;
+      const pe = (type, [x, y], buttons) => canvas.dispatchEvent(new PointerEvent(type, {
+        clientX: x, clientY: y, screenX: x, screenY: y, pointerId: 1, pointerType: 'mouse', isPrimary: true,
+        button: 0, buttons, bubbles: true, cancelable: true, composed: true, view: window,
+      }));
+      const beforeA = { x: a0.x, y: a0.y };
+      const firstDrag = M.count() + 1;
+      pe('pointermove', toClient(sx, sy), 0);
+      pe('pointerdown', toClient(sx, sy), 1);
+      await sleep(30);
+      const STEPS = 26;
+      const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      for (let i = 1; i <= STEPS; i++) {
+        const [px, py] = path(ease(i / STEPS));
+        pe('pointermove', toClient(sx + px, sy + py), 1);
+        await M.shot('drag ' + i + '/' + STEPS, { fast: true });
+      }
+      pe('pointerup', toClient(sx + DX, sy + DY), 0);
+      await sleep(200);
+      const lastDrag = M.count();
+
+      // The drag moved the selection (Excalidraw did it, not the script API).
+      const a1 = frameOf(N.A);
+      const mdx = a1.x - beforeA.x, mdy = a1.y - beforeA.y;
+      T.pass(Math.abs(mdx - DX) < 25 && Math.abs(mdy - DY) < 25, 'drag moved A by ' + [mdx, mdy].map(Math.round) + ' (asked ' + [DX, DY] + ')',
+        'drag did not move A as asked: ' + [mdx, mdy].map(Math.round) + ' vs ' + [DX, DY]);
+
+      // Bindings after the drop.
+      const seed = F.live().find(e => e.id === seedArrow.id);
+      const xg = glyphOf(N.P1, N.P2), fa = frameOf(N.A);
+      const bad = [];
+      if (!seed) bad.push('arrow into A is gone');
+      else {
+        if (seed.startBinding?.elementId !== xg?.id) bad.push('start bound to ' + seed.startBinding?.elementId + ', not the P1 x P2 x');
+        if (seed.endBinding?.elementId !== fa?.id) bad.push('end bound to ' + seed.endBinding?.elementId + ', not A frame');
+        const p0 = [seed.x + seed.points[0][0], seed.y + seed.points[0][1]], pn = [seed.x + seed.points.at(-1)[0], seed.y + seed.points.at(-1)[1]];
+        const t0 = [xg.x + xg.width / 2, xg.y + xg.height], tn = [fa.x + fa.width / 2, fa.y];
+        const d0 = Math.hypot(p0[0] - t0[0], p0[1] - t0[1]), dn = Math.hypot(pn[0] - tn[0], pn[1] - tn[1]);
+        T.out('arrow into A: start ' + p0.map(Math.round) + ' (x bottom middle ' + t0.map(Math.round) + ', off ' + d0.toFixed(2) + ' px), end '
+          + pn.map(Math.round) + ' (A frame top middle ' + tn.map(Math.round) + ', off ' + dn.toFixed(2) + ' px), elbowed ' + !!seed.elbowed
+          + ', points ' + JSON.stringify(seed.points.map(p => p.map(Math.round))));
+        if (dn > 3) bad.push('end ' + dn.toFixed(1) + ' px from A frame top middle');
+        if (d0 > 3) bad.push('start ' + d0.toFixed(1) + ' px from the x bottom middle');
+      }
+      T.pass(!bad.length, 'arrow into A still bound (P1 x P2 x -> A frame) and ends on the frame top middle', 'arrow into A after the drag: ' + bad.join('; '));
+      T.check(F.arrows());
+      T.check(F.cut());
+      T.check(F.overlaps());
+      if (bad.length) throw new Error('arrow into A did not follow the drag; not making the GIF');
+
+      F.deselect();
+      await M.shot('dropped');
+      const n = M.count();
+      const delays = Array.from({ length: n }, (_, i) => i + 1 >= firstDrag && i + 1 <= lastDrag ? 5 : 120);
+      delays[n - 1] = 250;
+      const mid = Math.round((firstDrag + lastDrag) / 2);
+      const review = [...Array(firstDrag - 1).keys()].map(i => i + 1).concat([firstDrag, Math.round((firstDrag + mid) / 2), mid, lastDrag, n]);
+      M.writeMeta(delays, [...new Set(review)]);
     },
   };
 

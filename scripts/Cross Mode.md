@@ -9,8 +9,10 @@ cross-line style (red, dashed, 20% opacity). Draw a cross line; it disappears an
     genotype at that end (sex preset opposite to the other end's), then the
     picker opens to cross the two. Empty -> empty starts a new lineage: the
     form opens for the start, then for the end, then the picker.
+Cross Mode is one-shot: it turns off once the offspring is created.
 Cancelling the Genotype form cancels it and leaves Cross Mode; cancelling the
-cross picker only skips that cross. Other lines are left alone. The mode stays on after each cross.
+cross picker keeps the mode on so the line can be drawn again. Other lines are
+left alone.
 
 Leave the mode with Esc, by picking any other tool, or by running this
 command again. Suggested hotkey: Shift+9 (Settings -> Hotkeys).
@@ -131,7 +133,9 @@ async function handle(line) {
   if (!a) return stop("Cross mode off (cancelled).");
   const b = to ?? await createAt(end, glyphOf(a));
   if (!b) return stop("Cross mode off (cancelled).");
-  await cross(a, b);
+  // One-shot: once the offspring exists, leave the mode. A cancelled picker
+  // returns nothing, so the mode stays on to try again.
+  if (await cross(a, b)) stop("Cross mode off (offspring created).");
 }
 
 const opposite = g => g === "♂" ? "♀" : (g === "♀" || g === "☿") ? "♂" : null;
@@ -186,7 +190,8 @@ function stop(message) {
   window._flyCrossMode = undefined;
   notice.hide();
   api.updateScene({ appState: saved });
-  if (api.getAppState().activeTool?.type === "line") api.setActiveTool({ type: "selection" });
+  // Back to the selection tool, with the tool lock as it was before the mode.
+  api.setActiveTool({ type: "selection", locked: !!before.activeTool?.locked });
   if (message) new Notice(message, 2000);
 }
 
