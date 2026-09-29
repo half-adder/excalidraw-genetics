@@ -4,6 +4,28 @@ Excalidraw Script Engine scripts for drawing *Drosophila* genotypes and crossing
 
 Each genotype is drawn as native Excalidraw elements (allele text, fraction lines, `;` separators, optional sex glyph), grouped, and tagged with a stable `genotypeId` in `customData`, so the scripts can find and redraw a genotype no matter how it has been moved or edited.
 
+## Tour
+
+**Genotype**: create a genotype with a form laid out like the genotype itself; select it and run it again to edit it in place.
+
+![Genotype form: create, then edit in place](docs/media/genotype.gif)
+
+**Cross Genotypes**: select two parents and pick one card per chromosome. The sex follows the X card, the preview updates live, and the label and selection criterion are optional.
+
+![Cross Genotypes picker and the resulting offspring](docs/media/cross.gif)
+
+**Cross Mode**: draw a red dashed line between two genotypes to cross them (Shift+9 suggested).
+
+![Cross Mode: a line between two genotypes opens the picker](docs/media/cross-mode.gif)
+
+**Tidy** lays out a whole pedigree; **Tidy Below** tidies one branch and leaves everything above it alone.
+
+![Tidy a scrambled pedigree, then Tidy Below on one branch](docs/media/tidy.gif)
+
+**Break Cross**: detach an offspring (or break a whole cross) without deleting any genotype; one undo brings it back.
+
+![Break Cross, then undo](docs/media/break-cross.gif)
+
 ## Scripts
 
 | Script | What it does |
@@ -48,6 +70,7 @@ The Excalidraw Script Engine caches scripts that change outside Obsidian; see `C
 
 ```bash
 uv run installer/build.py   # writes dist/Install Fly Genetics.md
+docs/media/make-media.sh    # regenerates the README GIFs (about a minute)
 ```
 
 ## Tests
