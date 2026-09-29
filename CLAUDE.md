@@ -92,7 +92,7 @@ To release:
 
 1. On `main`: set `VERSION` to today's date, add a `## <version>` section at the top of `CHANGELOG.md`, commit.
 2. `tests/run-all.sh` must pass; `uv run installer/build.py`; commit `dist/`.
-3. `tools/scan.sh`: checks tracked files and the text inside the built installer against the maintainer's private blocklist (kept outside the repo); it must PASS.
+3. `git status` must be clean (regenerating GIFs or running tests can rebuild fixtures; commit them). Then `tools/scan.sh`: checks tracked files and the text inside the built installer against the maintainer's private blocklist (kept outside the repo); it must PASS.
 4. `git switch public && git rm -rq . && git checkout main -- . && git commit -m "Release <version>" && git push public public:main`, then `git tag v<version> && git push public v<version>` and `gh release create v<version> --repo half-adder/excalidraw-genetics --title <version> --notes "<that CHANGELOG section>"`; `git switch main`.
 
 Labmates update with the "Update Fly Genetics" command, which fetches `dist/Install Fly Genetics.md` from the public `main`.

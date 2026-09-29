@@ -2,6 +2,11 @@
 
 Versions are release dates (`YYYY.M.D`, with `.2`, `.3` for more releases on the same day).
 
+## 2026.9.29.5
+
+- Backcrosses: crossing an offspring with its own parent (or crossing a stock again in a later generation) draws a copy of that parent beside its new mate, so the original cross keeps both its parents. Tidy repairs drawings that already have this.
+- A genotype copied with Cmd+D, copy/paste or alt-drag becomes its own genotype. Tidy used to merge the copies, deleting one. Copying a whole family (parents, their `x` and offspring together) keeps it a family.
+
 ## 2026.9.29.4
 
 - Genotypes always show X, II and III: an empty chromosome is drawn as +/+ (so w ; +/+ ; MKRS/TM6B can't be misread). Tidy fills in missing chromosomes on older genotypes.

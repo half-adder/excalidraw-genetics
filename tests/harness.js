@@ -12,7 +12,7 @@ window.__flyT = (() => {
   const crypto = require('crypto');
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const DRAWING = 'Excalidraw/_test-harness.excalidraw.md';
-  const SCRIPTS = ['Genotype', 'Cross Genotypes', 'Tidy', 'Select Below', 'Tidy Below', 'Cross Mode', 'Break Cross', 'Update Fly Genetics'];
+  const SCRIPTS = ['Genotype', 'Cross Genotypes', 'Tidy', 'Select Below', 'Select Lineage', 'Tidy Below', 'Cross Mode', 'Break Cross', 'Update Fly Genetics'];
   const FIXTURE_SCRIPTS = ['Genotype', 'Cross Genotypes', 'Tidy'];
   const plugin = () => app.plugins.plugins['obsidian-excalidraw-plugin'];
   const sha = s => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);

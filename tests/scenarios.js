@@ -85,6 +85,27 @@ window.__flyScenarios = (() => {
       await T.cross('E', 'A', 'P3', { offspringGlyph: '♀', pick: { X: 0, II: 0, III: 1 }, labelText: 'E', criterionText: 'TM6B' });
       await T.tidyAll();
     },
+    // P1 x P2 -> A (female); the start of a backcross of A to its father.
+    'backcross': async T => {
+      await founders(T);
+      await T.cross('A', 'P1', 'P2', { offspringGlyph: '♀', pick: { X: 0, II: 0, III: 0 }, labelText: 'A' });
+    },
+    // P1 x P2 -> A, C (both female); both are later crossed back to P2.
+    'backcross-sibs': async T => {
+      await founders(T);
+      await T.cross('A', 'P1', 'P2', { offspringGlyph: '♀', pick: { X: 0, II: 0, III: 0 }, labelText: 'A' });
+      await T.cross('C', 'P1', 'P2', { offspringGlyph: '♀', pick: { X: 1, II: 1, III: 0 }, labelText: 'C' });
+    },
+    // P1 x P2 -> A, B (female); A x P3 -> C; stock S, crossed later to B
+    // (row 1) and to C (row 2).
+    'reused-stock': async T => {
+      await founders(T);
+      await T.cross('A', 'P1', 'P2', { offspringGlyph: '♀', pick: { X: 0, II: 0, III: 0 }, labelText: 'A' });
+      await T.cross('B', 'P1', 'P2', { offspringGlyph: '♀', pick: { X: 1, II: 1, III: 0 }, labelText: 'B' });
+      await T.genotype('P3', { glyph: '♂', X: { top: 'yw', bottom: 'Y' }, II: { top: '', bottom: '' }, III: { top: 'MKRS', bottom: 'TM6B' } });
+      await T.cross('C', 'A', 'P3', { offspringGlyph: '♀', pick: { X: 0, II: 0, III: 0 }, labelText: 'C' });
+      await T.genotype('S', { glyph: '♂', X: { top: 'y', bottom: 'Y' }, II: { top: '', bottom: '' }, III: { top: 'Sb', bottom: 'TM3' } });
+    },
     // P1 x P2 -> F, made with a label and a selection criterion.
     'label-criterion': async T => {
       await founders(T);
