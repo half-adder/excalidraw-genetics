@@ -29,10 +29,11 @@ const realScriptFolder = (ea.plugin.settings.scriptFolderPath ?? "Excalidraw/Scr
 const scriptFolder = (target?.scriptFolder ?? realScriptFolder).replace(/\/+$/, "");
 const manifestPath = `${scriptFolder}/.fly-genetics.json`;
 
-let installed = null;
+let manifest = {};
 try {
-  installed = JSON.parse(await vault.adapter.read(manifestPath)).version;
+  manifest = JSON.parse(await vault.adapter.read(manifestPath));
 } catch (e) { /* no manifest yet: treat as out of date */ }
+const installed = manifest.version ?? null;
 
 let text = source;
 if (text === null) {
@@ -46,13 +47,24 @@ if (text === null) {
   }
 }
 
-const latest = text.match(/"version":\s*"([^"]+)"/)?.[1];
-if (!latest || !text.includes("const PAYLOAD =")) {
+let payload = null;
+try {
+  const i = text.indexOf("const PAYLOAD = ") + "const PAYLOAD = ".length;
+  payload = JSON.parse(text.slice(i, text.indexOf("\n", i)).replace(/;\s*$/, ""));
+} catch (e) { /* handled below */ }
+const latest = payload?.version;
+if (!latest || !payload.scripts) {
   new Notice("Fly Genetics: the downloaded installer looks wrong; nothing changed.");
   return;
 }
-window._flyGeneticsUpdateResult = { installed, latest };
-if (installed === latest) {
+window._flyGeneticsUpdateResult = { installed, latest, installedFingerprint: manifest.fingerprint ?? null, latestFingerprint: payload.fingerprint ?? null };
+// Same contents means up to date. Fingerprints decide when both sides have one
+// (so a release with an unchanged version name is still picked up); older
+// installs without a fingerprint fall back to the version name.
+const upToDate = manifest.fingerprint && payload.fingerprint
+  ? manifest.fingerprint === payload.fingerprint
+  : installed === latest;
+if (upToDate) {
   new Notice(`Fly Genetics is up to date (${latest}).`);
   return;
 }

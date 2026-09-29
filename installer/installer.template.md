@@ -106,7 +106,7 @@ for (const p of plan) {
   if (p.state === "new" || p.state === "changed" || p.state === "update") await writeText(p.path, p.text);
   if (p.state !== "kept") hashes[p.name] = await sha256(p.text);
 }
-await vault.adapter.write(manifestPath, JSON.stringify({ version: PAYLOAD.version, hashes }, null, 2));
+await vault.adapter.write(manifestPath, JSON.stringify({ version: PAYLOAD.version, fingerprint: PAYLOAD.fingerprint, hashes }, null, 2));
 
 // ---- 2. Font ------------------------------------------------------------------
 
@@ -142,9 +142,17 @@ if (!target?.skipSettings) {
 // ---- Report -------------------------------------------------------------------
 
 const summary = plan.map(p => `${p.name}: ${{ new: "installed", changed: "replaced", update: "updated", same: "already current", kept: "kept yours" }[p.state]}`);
-window._flyGeneticsInstallResult = { plan: plan.map(({ name, state }) => ({ name, state })), fontPath, fontNote };
+// What's new: changelog entries newer than the previously installed version
+// (just the latest entry on a first install or an unknown old version).
+const entries = PAYLOAD.changelog ?? [];
+const seen = entries.findIndex(e => e.version === manifest.version);
+const news = manifest.version === PAYLOAD.version ? [] : entries.slice(0, seen > 0 ? seen : 1);
+const whatsNew = news.map(e => `${e.version}\n${e.text}`).join("\n\n");
+
+window._flyGeneticsInstallResult = { plan: plan.map(({ name, state }) => ({ name, state })), fontPath, fontNote, whatsNew };
 new Notice(
   `Fly Genetics ${PAYLOAD.version}\n${summary.join("\n")}\n${fontNote}\n` +
+  (whatsNew ? `\nWhat's new:\n${whatsNew}\n\n` : "") +
   "Optional: assign hotkeys in Settings -> Hotkeys (search \"Genotype\").",
   15000
 );

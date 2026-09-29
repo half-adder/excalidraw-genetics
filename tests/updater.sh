@@ -85,6 +85,24 @@ try {
   T.pass(!wrong.length && m.version === payload.version && m.hashes[O] === sha(payload.scripts[O]),
     'installed scripts current, manifest version ' + m.version,
     'after update: differ ' + wrong.join(', ') + '; manifest version ' + m.version);
+  T.pass(m.fingerprint === payload.fingerprint, 'manifest records the fingerprint (' + m.fingerprint + ')', 'manifest fingerprint ' + m.fingerprint + ', want ' + payload.fingerprint);
+  T.pass(typeof window._flyGeneticsInstallResult?.whatsNew === 'string' && window._flyGeneticsInstallResult.whatsNew.includes(payload.version),
+    "installer reports what's new for " + payload.version, "what's new: " + JSON.stringify(window._flyGeneticsInstallResult?.whatsNew));
+
+  // 3. Same version name, different contents (a release without a VERSION bump): still an update.
+  const cur = {}; for (const n of names) cur[n] = sha(payload.scripts[n]);
+  await vault.delete(vault.getAbstractFileByPath(INST));
+  await vault.adapter.write(MANIFEST, JSON.stringify({ version: payload.version, fingerprint: 'stale0000000', hashes: cur }, null, 2));
+  r = await update();
+  T.pass(r?.installedFingerprint === 'stale0000000' && !!window._flyGeneticsInstallResult,
+    'same version, different fingerprint: update found and installed', 'result ' + JSON.stringify(r) + (window._flyGeneticsInstallResult ? '' : '; installer did not run'));
+
+  // 4. Different version name, same contents: up to date (fingerprint decides).
+  await vault.delete(vault.getAbstractFileByPath(INST));
+  await vault.adapter.write(MANIFEST, JSON.stringify({ version: 'renamed', fingerprint: payload.fingerprint, hashes: cur }, null, 2));
+  r = await update();
+  T.pass(r?.installed === 'renamed' && !window._flyGeneticsInstallResult && !vault.getAbstractFileByPath(INST),
+    'different version name, same fingerprint: up to date', 'result ' + JSON.stringify(r) + (window._flyGeneticsInstallResult ? '; installer ran' : ''));
 } finally {
   await cleanup();
   const left = [INST, ROOT].filter(p => vault.getAbstractFileByPath(p) || fs.existsSync(vault.adapter.basePath + '/' + p));

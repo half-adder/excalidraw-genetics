@@ -84,10 +84,15 @@ See `README.md` for the v1 customData schema, shorthand syntax, and roadmap. See
 
 ## Publishing
 
-The public repo (github.com/half-adder/excalidraw-genetics) has its own history: the orphan branch `public`, pushed as its `main`. Private history on `main` is never pushed (older commits mention unpublished research). To release:
+The public repo (github.com/half-adder/excalidraw-genetics) has its own history: the orphan branch `public`, pushed as its `main` (remote `public`). Private history on `main` is never pushed (older commits mention unpublished research).
 
-1. On `main`: commit, run `tests/run-all.sh`, `uv run installer/build.py`, commit `dist/`.
-2. `tools/scan.sh`: checks tracked files and the text inside the built installer against the maintainer's private blocklist (kept outside the repo); it must PASS.
-3. `git switch public && git rm -rq . && git checkout main -- . && git commit -m "<release notes>" && git push public public:main && git switch main`.
+Versions are release dates: `VERSION` holds `YYYY.M.D` (append `.2`, `.3` for more releases the same day). The installer also carries a content fingerprint; the updater compares fingerprints, so a missed `VERSION` bump still reaches everyone. `CHANGELOG.md` sections become the updater's "What's new".
+
+To release:
+
+1. On `main`: set `VERSION` to today's date, add a `## <version>` section at the top of `CHANGELOG.md`, commit.
+2. `tests/run-all.sh` must pass; `uv run installer/build.py`; commit `dist/`.
+3. `tools/scan.sh`: checks tracked files and the text inside the built installer against the maintainer's private blocklist (kept outside the repo); it must PASS.
+4. `git switch public && git rm -rq . && git checkout main -- . && git commit -m "Release <version>" && git push public public:main`, then `git tag v<version> && git push public v<version>` and `gh release create v<version> --repo half-adder/excalidraw-genetics --title <version> --notes "<that CHANGELOG section>"`; `git switch main`.
 
 Labmates update with the "Update Fly Genetics" command, which fetches `dist/Install Fly Genetics.md` from the public `main`.
