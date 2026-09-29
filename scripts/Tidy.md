@@ -395,9 +395,14 @@ for (const gid of lineageSet) {
 
   let structureOk = true;
   const chromosomes = [];
-  for (const label of presentChromosomes) {
+  // X, II and III are always drawn; a genotype drawn before that rule gets its
+  // missing ones filled in as +/+.
+  const labels = CHROMOSOME_ORDER.filter(c => ["X", "II", "III"].includes(c) || allelesByChromosome[c]);
+  for (const label of labels) {
     const a = allelesByChromosome[label];
-    if (a.single && !a.top && !a.bottom) {
+    if (!a) {
+      chromosomes.push({ label, kind: "het", alleles: { top: "+", bottom: "+" } });
+    } else if (a.single && !a.top && !a.bottom) {
       chromosomes.push({ label, kind: "single", alleles: { single: a.single.text } });
     } else if (a.top && a.bottom) {
       chromosomes.push({ label, kind: "het", alleles: { top: a.top.text, bottom: a.bottom.text } });

@@ -98,6 +98,24 @@ try {
   T.pass(!bad.length && (await read(SCRIPTS + '/' + O + '.md')) === src(O), 'older unedited ' + O + ': "update" without asking, replaced with the source',
     'older unedited ' + O + ': ' + bad.join(', '));
   T.pass((await manifest()).hashes[O] === sha(src(O)), 'manifest hash of ' + O + ' updated', 'manifest hash of ' + O + ' not updated');
+
+  // 6. A script that is a symbolic link (a development copy): never written, even with confirm:true.
+  const L = 'Break Cross', linkPath = vault.adapter.basePath + '/' + SCRIPTS + '/' + L + '.md';
+  const target = require('path').join(require('os').tmpdir(), 'fly-linked-' + Date.now() + '.md');
+  const devText = src(L) + '\n// work in progress\n';
+  fs.writeFileSync(target, devText);
+  fs.rmSync(linkPath, { force: true });
+  fs.symlinkSync(target, linkPath);
+  try {
+    st = await run(true);
+    bad = only(st, { [L]: 'linked' }, 'same');
+    T.pass(!bad.length && fs.readFileSync(target, 'utf8') === devText && fs.lstatSync(linkPath).isSymbolicLink(),
+      'linked ' + L + ': "linked", link and its target left untouched',
+      'linked ' + L + ': ' + bad.join(', ') + (fs.readFileSync(target, 'utf8') === devText ? '' : '; TARGET WAS OVERWRITTEN'));
+  } finally {
+    fs.rmSync(linkPath, { force: true });
+    fs.rmSync(target, { force: true });
+  }
 } finally {
   await cleanup();
   const left = [INST, ROOT].filter(p => vault.getAbstractFileByPath(p) || fs.existsSync(vault.adapter.basePath + '/' + p));

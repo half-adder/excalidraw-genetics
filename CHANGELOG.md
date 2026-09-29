@@ -2,6 +2,12 @@
 
 Versions are release dates (`YYYY.M.D`, with `.2`, `.3` for more releases on the same day).
 
+## 2026.9.29.4
+
+- Genotypes always show X, II and III: an empty chromosome is drawn as +/+ (so w ; +/+ ; MKRS/TM6B can't be misread). Tidy fills in missing chromosomes on older genotypes.
+- Updating in a vault whose scripts are symbolic links (a development setup) leaves those scripts alone.
+- README GIFs regenerated.
+
 ## 2026.9.29.3
 
 - Cross Mode is one-shot: it turns off once the offspring is created (cancelling the picker keeps it on to try again).

@@ -92,6 +92,13 @@ for (const [name, text] of Object.entries(PAYLOAD.scripts)) {
   const f = vault.getAbstractFileByPath(path);
   const current = f ? await vault.read(f) : null;
   let state = current === null ? "new" : current === text ? "same" : "changed";
+  // A symbolic link is a development copy (the scripts linked from a clone of
+  // the repo): never write through it, whatever the prompts say.
+  try {
+    const fsm = require("fs");
+    const abs = `${vault.adapter.basePath}/${path}`;
+    if (fsm.existsSync(abs) && fsm.lstatSync(abs).isSymbolicLink()) state = "linked";
+  } catch (e) { /* not a desktop filesystem: no links to protect */ }
   if (state === "changed" && manifest.hashes?.[name] === await sha256(current)) state = "update";
   plan.push({ name, path, text, state });
 }
@@ -105,7 +112,7 @@ if (edited.length && !(await confirm(
 const hashes = { ...(manifest.hashes ?? {}) };
 for (const p of plan) {
   if (p.state === "new" || p.state === "changed" || p.state === "update") await writeText(p.path, p.text);
-  if (p.state !== "kept") hashes[p.name] = await sha256(p.text);
+  if (p.state !== "kept" && p.state !== "linked") hashes[p.name] = await sha256(p.text);
 }
 await vault.adapter.write(manifestPath, JSON.stringify({ version: PAYLOAD.version, fingerprint: PAYLOAD.fingerprint, hashes }, null, 2));
 
@@ -142,7 +149,7 @@ if (!target?.skipSettings) {
 
 // ---- Report -------------------------------------------------------------------
 
-const summary = plan.map(p => `${p.name}: ${{ new: "installed", changed: "replaced", update: "updated", same: "already current", kept: "kept yours" }[p.state]}`);
+const summary = plan.map(p => `${p.name}: ${{ new: "installed", changed: "replaced", update: "updated", same: "already current", kept: "kept yours", linked: "linked (development copy, left alone)" }[p.state]}`);
 // What's new: changelog entries newer than the previously installed version
 // (just the latest entry on a first install or an unknown old version).
 const entries = PAYLOAD.changelog ?? [];

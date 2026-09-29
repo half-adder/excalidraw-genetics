@@ -432,12 +432,18 @@ if (!state) { window._genotypeLastResult = null; return; }
 
 // ---- Build elements ------------------------------------------------------
 
+// X, II and III are always drawn: an empty one is +/+ (so "w ; +/+ ; MKRS/TM6B"
+// never reads as a second chromosome). An entirely empty form stays empty (the
+// delete case). IV is drawn only when it has alleles.
+const ALWAYS_DRAWN = ["X", "II", "III"];
+const anyAllele = CHROMOSOME_ORDER.some(c => (state[c]?.top ?? "").trim() || (state[c]?.bottom ?? "").trim());
 const chromosomes = [];
 for (const label of CHROMOSOME_ORDER) {
   const top = (state[label]?.top ?? "").trim();
   const bottom = (state[label]?.bottom ?? "").trim();
   if (top && bottom) chromosomes.push({ label, kind: "het", alleles: { top, bottom } });
   else if (top || bottom) chromosomes.push({ label, kind: "single", alleles: { single: top || bottom } });
+  else if (anyAllele && ALWAYS_DRAWN.includes(label)) chromosomes.push({ label, kind: "het", alleles: { top: "+", bottom: "+" } });
 }
 
 // Anchor: edit mode keeps the old left edge and midline; create uses view center.
