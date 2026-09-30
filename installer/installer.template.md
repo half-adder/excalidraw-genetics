@@ -31,8 +31,8 @@ redirects the install and answers the prompts, for testing.
 
 const PAYLOAD = /*__PAYLOAD__*/null;
 
-if (!ea.verifyMinimumPluginVersion || !ea.verifyMinimumPluginVersion("2.19.1")) {
-  new Notice("Fly Genetics needs Excalidraw plugin 2.19.1 or newer.");
+if (!ea.verifyMinimumPluginVersion || !ea.verifyMinimumPluginVersion("2.20.2")) {
+  new Notice("Fly Genetics needs Excalidraw plugin 2.20.2 or newer.");
   return;
 }
 

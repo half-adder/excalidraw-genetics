@@ -2,6 +2,13 @@
 
 Versions are release dates (`YYYY.M.D`, with `.2`, `.3` for more releases on the same day).
 
+## 2026.9.30
+
+- Undo is safe: every command (Genotype, Cross Genotypes, Cross Mode, Tidy, Tidy Below, Break Cross) is undone by one Cmd+Z, and redone by one Cmd+Shift+Z. Undoing a cross used to step through half-finished states, deleting whole lineages from view. Requires Excalidraw 2.20.2 or newer.
+- The cross picker lists each offspring once: identical cards, and pairs that differ only in which parent gave which homolog (CyO/+ and +/CyO), are merged.
+- In the cross picker, F flips the card under the mouse (or the selected card) top to bottom. Cards with a Y don't flip.
+- In the Genotype form, Option+F flips the chromosome under the mouse (or the one being typed in), and each chromosome shows a flip button when hovered. Chromosomes with a Y don't flip.
+
 ## 2026.9.29.5
 
 - Backcrosses: crossing an offspring with its own parent (or crossing a stock again in a later generation) draws a copy of that parent beside its new mate, so the original cross keeps both its parents. Tidy repairs drawings that already have this.

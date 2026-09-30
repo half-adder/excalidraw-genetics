@@ -34,8 +34,8 @@ Each genotype is drawn as native Excalidraw elements (allele text, fraction line
 
 | Script | What it does |
 |---|---|
-| `Genotype` | Form for creating or editing one genotype: sex-symbol column plus a text field per homolog, laid out like the genotype (`X ; II ; III`, top over bottom). With a genotype selected it edits it in place (one undo step); for an offspring it also edits its label and selection criterion. With nothing selected it creates one at the nearest free spot to the view center. See `docs/plans/2026-09-28-genotype-form-editor-design.md`. |
-| `Cross Genotypes` | Select two genotypes and pick the offspring: one card per maternal × paternal homolog pair for each chromosome, with the offspring sex linked to the X card (`Y` = male, XX = female, "or Y" = both sexes), a live preview, and optional label and multi-line selection criterion. Draws the offspring, the `x`, a bound elbow lineage arrow (the criterion rides on it as an arrow label), then runs Tidy. See `docs/plans/2026-09-28-cross-picker-design.md`. |
+| `Genotype` | Form for creating or editing one genotype: sex-symbol column plus a text field per homolog, laid out like the genotype (`X ; II ; III`, top over bottom). With a genotype selected it edits it in place (one undo step); for an offspring it also edits its label and selection criterion. With nothing selected it creates one at the nearest free spot to the view center. Option+F flips a chromosome (swaps its top and bottom text): the one under the mouse, or, with no hover, the one whose field has focus (focus then follows the text); a small `⇅` button beside each chromosome's header does the same on click. A chromosome carrying `Y` never flips. See `docs/plans/2026-09-28-genotype-form-editor-design.md`. |
+| `Cross Genotypes` | Select two genotypes and pick the offspring: one card per distinct maternal × paternal homolog pair for each chromosome (identical cards, and cards that differ only in which parent gave which homolog, are merged), with the offspring sex linked to the X card (`Y` = male, XX = female, "or Y" = both sexes), a live preview, and optional label and multi-line selection criterion. Press F to flip a card (swap top and bottom, also selecting it); X cards that carry a Y never flip. Draws the offspring, the `x`, a bound elbow lineage arrow (the criterion rides on it as an arrow label), then runs Tidy. See `docs/plans/2026-09-28-cross-picker-design.md`. |
 | `Cross Mode` | Toggle a quick-crossing mode: draw a red dashed line between two genotypes to cross them. An end in empty space creates a new genotype there first; empty to empty starts a new lineage. The mode turns off once the offspring is created; Esc (or cancelling the Genotype form) leaves it early. |
 | `Tidy` | Lays out crosses: parents side by side with the `x` between them, offspring below, no overlaps. Nothing selected: every lineage. One genotype selected: its whole lineage. Several selected: exactly those, with everything else held still. Moves things as little as possible and keeps siblings in the order you placed them. A genotype crossed on two rows (a backcross to a parent, or a stock used again in a later generation) is drawn again beside its later mate, as an independent copy. |
 | `Tidy Below` | Tidies the selected genotype and everything below it (its descendants and their mates); everything above stays put. |
@@ -43,11 +43,11 @@ Each genotype is drawn as native Excalidraw elements (allele text, fraction line
 | `Break Cross` | Select an offspring to detach it from its parents, or the `x` (or both parents) to break the whole cross. Removes the `x`, lineage arrows and criteria involved; never deletes a genotype. One undo restores it. |
 | `Update Fly Genetics` | Checks GitHub for a newer version and runs the latest installer. Installed by the installer. |
 
-All scripts live in `scripts/` and run from the command palette. Suggested hotkeys (Settings → Hotkeys; the installer does not set them): Genotype, Cross Genotypes, Cross Mode (Shift+9), Tidy, Tidy Below, Select Below.
+Every command is one undo step (Cmd+Z), including what it runs for you: a cross and the Tidy after it, Tidy Below's Select Below and Tidy, or a Cross Mode line with the genotypes and cross it makes. Cancelling a command's form records nothing, unless the command had already changed the drawing before the form opened (for example, turning a copied genotype into its own); then that change is its one undo step. All scripts live in `scripts/` and run from the command palette. Suggested hotkeys (Settings → Hotkeys; the installer does not set them): Genotype, Cross Genotypes, Cross Mode (Shift+9), Tidy, Tidy Below, Select Below.
 
 ## Install (labmates)
 
-1. In Obsidian, install and enable the **Excalidraw** community plugin.
+1. In Obsidian, install and enable the **Excalidraw** community plugin (version 2.20.2 or newer).
 2. Download `dist/Install Fly Genetics.md` (one file, about 1 MB).
 3. Put it in your Excalidraw script folder: Settings → Excalidraw → Basic → Files and folders → Excalidraw Automate script folder (default `Excalidraw/Scripts`).
 4. Open the command palette (Cmd/Ctrl+P) and run **Install Fly Genetics**.
@@ -89,6 +89,7 @@ Scripts run inside a live Excalidraw view, so tests drive Obsidian through the `
 - `tests/tidy-below.sh`: Tidy Below and tidying a hand-picked selection.
 - `tests/tidy-joined-families.sh`: two families joined by a cross between one's child and the other's grandchild are laid out together, with every arrow present and routed around genotypes.
 - `tests/genotype-label-criterion.sh`: editing an offspring's label and criterion in the Genotype form.
+- `tests/genotype-form-flip.sh`: Option+F and the `⇅` button flip a chromosome in the Genotype form; a `Y`-bearing chromosome never flips.
 - `tests/cross-mode-esc.sh`: Esc leaves Cross Mode.
 
 They take minutes each (they drive a live Obsidian); run them one at a time, not in parallel.

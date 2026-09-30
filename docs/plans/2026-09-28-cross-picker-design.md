@@ -13,7 +13,7 @@ Design doc for replacing the typed offspring shorthand in `scripts/Cross Genotyp
 ## Non-goals
 
 - Recombinant chromosomes. Every option is an unmodified maternal homolog over an unmodified paternal homolog.
-- Allele knowledge (which alleles are balancers, dominant markers, recessive lethal). No reordering, merging, filtering or lethality flags. See Future work.
+- Allele knowledge (which alleles are balancers, dominant markers, recessive lethal). No reordering by allele identity, filtering or lethality flags. See Future work. (Text-identity merging of duplicate/flipped cards is in scope; see Options below.)
 
 ---
 
@@ -41,9 +41,9 @@ The father's X homolog list is split into his X homologs (everything except `Y`)
 
 ## Options
 
-For each autosome (II, III), the options are every maternal homolog × every paternal homolog, in order: mother homolog 1 × father homolog 1, 1 × 2, 2 × 1, 2 × 2. Maternal homolog on top. No merging: a homozygous parent produces identical-looking cards, and they are all listed.
+For each autosome (II, III), the options are every maternal homolog × every paternal homolog, in order: mother homolog 1 × father homolog 1, 1 × 2, 2 × 1, 2 × 2. Maternal homolog on top. Cards that are identical, or that differ only in which parent gave which homolog (`CyO/+` and `+/CyO` are the same genotype), are merged into one card: the first occurrence in that order is kept and later duplicates/flips are dropped. A homozygous parent no longer produces duplicate-looking cards.
 
-X always lists daughters, then sons, then both-sex combos: each maternal X × each paternal X (female), each maternal X × `Y` (male), then each maternal X over `<paternal X> or Y` (both; drawn literally, e.g. `FM7a` over `w or Y`). Sons and combos are listed only when the father has a `Y`.
+X always lists daughters, then sons, then both-sex combos: each maternal X × each paternal X (female), each maternal X × `Y` (male), then each maternal X over `<paternal X> or Y` (both; drawn literally, e.g. `FM7a` over `w or Y`). Sons and combos are listed only when the father has a `Y`. The same merge rule applies within each of the three groups (daughters, sons, both-sex combos) independently; a card is never merged with a card of a different sex tag.
 
 Sex and the X card are kept consistent:
 
@@ -75,6 +75,7 @@ An Obsidian `Modal`, styled like `Genotype`:
 |---|---|
 | ↑ / ↓ | Previous / next card in the focused column. |
 | ← / → , Tab / Shift+Tab | Previous / next column (X, II, III), then the Label and Criterion inputs. |
+| F | Flip a card (swap top and bottom): the card under the mouse, or, with no card under the mouse, the focused column's selected card. Flipping also selects the card. Per card, lasts while the picker is open (press again to flip back). X cards that carry a Y (sons, and "X or Y" both-sex cards) never flip. Ignored while typing in the Label or Criterion inputs, or with Cmd/Ctrl/Alt held. |
 | Enter | Commit. |
 | Esc | Close without changes. |
 

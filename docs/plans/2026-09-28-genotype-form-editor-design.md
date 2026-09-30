@@ -56,7 +56,7 @@ The initially focused field is the one matching the selected element when that e
 An Obsidian `Modal` (`ea.obsidian.Modal`) containing:
 
 1. A vertical column of sex-symbol toggle buttons (♂ ♀ ☿ ⚥ and "none") to the left of the grid, centered on the fraction bars. Exactly one is active. The buttons are mouse-only; Tab and the arrows move between allele fields.
-2. A grid laid out like the genotype: columns X, `;`, II, `;`, III; rows header, top allele, fraction bar, bottom allele. Each `;` spans the allele rows. Each fraction bar is a 2 px line the width of its column.
+2. A grid laid out like the genotype: columns X, `;`, II, `;`, III; rows header, top allele, fraction bar, bottom allele. Each `;` spans the allele rows. Each fraction bar is a 2 px line the width of its column. Each chromosome's header row also carries a small, faint `⇅` flip button (mouse-only, `tabindex="-1"`), hidden/disabled when that chromosome can't flip.
 3. Text in the inputs is centered. Each chromosome column is as wide as its longer allele (minimum 120 px plus padding) and updates as you type; the modal grows with it, up to 95% of the window width.
 4. OK and Cancel buttons.
 
@@ -67,6 +67,7 @@ An Obsidian `Modal` (`ea.obsidian.Modal`) containing:
 | Tab / Shift+Tab | Next / previous field in reading order: X top, X bottom, II top, II bottom, III top, III bottom. |
 | ↑ / ↓ | Move to the top / bottom field of the same chromosome. |
 | ← / → | Move the text cursor. When the cursor is already at the start (←) or end (→) of the field, move to the same row of the previous / next chromosome. |
+| Option+F (Alt+F) | Flip a chromosome: swap its top and bottom text. Acts on the chromosome under the mouse; with no hover, acts on the chromosome of the focused field, and focus follows the flipped text (same field position, same cursor offset). A chromosome with `Y` in either field, or with only one field filled, never flips. Matched on `e.code === "KeyF" && e.altKey` (no Cmd/Ctrl) since macOS reports `e.key` as `"ƒ"` for this combination; always `preventDefault`, so plain F and Shift+F still type normally. The `⇅` button beside a chromosome's header does the same flip on click. |
 | Enter | Commit: redraw and close. |
 | Esc | Close without changes. |
 
@@ -123,7 +124,7 @@ window._genotypeAuto = {
 };
 ```
 
-When set, the modal is skipped and these values are committed directly, using the same mode selection as an interactive run. A second hook, `window._genotypeFormProbe = true`, stores the form's initial state (mode, focused field, field values) in `window._genotypeFormState` and exits without opening the modal, for round-trip checks. While the real modal is open, `window._genotypeFormModal` exposes `{ modal, inputs, focusKey }` for keyboard tests.
+When set, the modal is skipped and these values are committed directly, using the same mode selection as an interactive run. A second hook, `window._genotypeFormProbe = true`, stores the form's initial state (mode, focused field, field values) in `window._genotypeFormState` and exits without opening the modal, for round-trip checks. While the real modal is open, `window._genotypeFormModal` exposes `{ modal, inputs, focusKey, labelInput, critInput, chromosomes, flipButtons }` for keyboard tests, where `chromosomes` and `flipButtons` are keyed by chromosome label (`"X"`, `"II"`, `"III"`): `chromosomes[chr]` is the hoverable wrapper element for Option+F, `flipButtons[chr]` its `⇅` button.
 
 ## Testing
 
@@ -135,4 +136,5 @@ All tests run on `Excalidraw/_test-scratch.md`, per the repo `CLAUDE.md`.
 4. **Carry-through.** Add a `parents` key to a genotype's elements, edit the genotype, and check that the key survives.
 5. **Undo.** After an edit, one Cmd+Z restores the previous element set. `editor:undo` is the Markdown editor's command and does not reach Excalidraw; dispatch a `keydown` (`key: "z"`, `metaKey: true`) on the view's `.excalidraw` container instead.
 6. **Keyboard.** Dispatch synthetic key events in the open modal and check focus movement for Tab, Shift+Tab, ↑, ↓, and ← / → at field edges and mid-field.
-7. **Visual.** Screenshot the modal and a redrawn genotype, and inspect both.
+7. **Flip.** Dispatch a `keydown` with `code: "KeyF"`, `key: "ƒ"`, `altKey: true` while hovering a chromosome (mouseenter on `window._genotypeFormModal.chromosomes[chr]`) and check its fields swap; same key with no hover but a field focused, and check focus follows the swapped text at the same cursor offset; click `window._genotypeFormModal.flipButtons[chr]`; check a `Y`-bearing chromosome's button is hidden/disabled and Option+F on it is a no-op; check plain `f` still types (not `defaultPrevented`). `tests/genotype-form-flip.sh`.
+8. **Visual.** Screenshot the modal and a redrawn genotype, and inspect both.

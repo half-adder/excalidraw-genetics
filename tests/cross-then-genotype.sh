@@ -38,7 +38,7 @@ const tidied = async (when, n) => {
 await T.cross('A', 'P1', 'P2', { offspringGlyph: '♀', pick: { X: 0, II: 0, III: 0 }, labelText: 'A' });
 bound('after cross A');
 await tidied('after cross A', 'A');
-await T.cross('B', 'P1', 'P2', { offspringGlyph: '♂', pick: { X: 2, II: 3, III: 0 }, labelText: 'B' });
+await T.cross('B', 'P1', 'P2', { offspringGlyph: '♂', pick: { X: 1, II: 3, III: 0 }, labelText: 'B' });
 bound('after cross B');
 await tidied('after cross B', 'B');
 

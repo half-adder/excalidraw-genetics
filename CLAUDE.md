@@ -43,6 +43,19 @@ Scripts cannot be unit-tested in isolation. They run inside the Excalidraw plugi
 3. For end-to-end tests including `utils.suggester` / `utils.inputPrompt`, invoke via the Script Engine: `obsidian command id="obsidian-excalidraw-plugin:<Script Title>"`. Modals cannot be answered from the CLI, so combine with the **agentic test hook** pattern below for unattended runs.
 4. Visual check: `obsidian dev:screenshot path=/tmp/x.png && sleep 1` (the PNG is written asynchronously) then `Read` the PNG.
 
+## Undo-safe operations (rule for every scene change)
+
+Every command is ONE undo step, including the scripts it starts (design: `docs/plans/2026-09-29-undo-safe-design.md`). This holds by construction only if every script follows the shared commit discipline:
+
+- A script that changes the drawing carries the "Undo-safe operations (same in every script; keep in sync)" block unchanged (edit it in one script, copy it to the others) and is listed in `REQUIRED_OP_SCRIPTS` in `tests/run-all.sh`.
+- Its work runs inside `return await flyOperation("<Script name>", async () => { ... });` (body not indented). Work started later (a timer, as in Cross Mode) is wrapped in `flyOperation` there.
+- Change elements only with `flyAddElementsToView()` (delete by setting `isDeleted` on the workbench copy) or `flyDeleteViewElements(els)`; select with `flySelect(els)` (or `updateScene({ appState })`). Never `ea.addElementsToView`, `ea.deleteViewElements`, `addElements`, `mutateElement`, `moveViewElementToZIndex`, `ea.selectElementsInView` (it records a step), `history.undo/redo` (use `flyUnrecordDrawn`), `captureUpdate`, or `updateScene` with elements or a non-literal argument.
+- Start another script only with `flyStart("<Script name>")`, never `executeCommandById`, so it joins the operation. When waiting for its result, also stop when the promise `flyStart` returns resolves (the script ended, maybe by failing).
+- `flyOperation` takes the file's own script name (checked).
+- Add a case to `tests/undo.sh`: one undo restores the drawing exactly and a second changes nothing, one redo re-applies it and a second changes nothing, a cancel records nothing.
+
+`tests/run-all.sh` fails (`undo-safe-discipline`) if the block drifts or a script writes the scene or starts a script outside the helpers. Scene writes are unrecorded (`NEVER`) and the operation records one step from its start to its end when its last script finishes; `EVENTUALLY` is not used because the plugin's own `NEVER` updates silently drop pending `EVENTUALLY` changes from history. Excalidraw's own captures inside a commit (`refreshAllArrows`) are kept out of the history by `flyQuietly`; see the design doc's findings before touching the block.
+
 ## Agentic test hook pattern
 
 Scripts in this repo (e.g. `Cross Genotypes.md`) expose a `window._<scriptName>Auto` global. When set, prompts are skipped and the global's values are used; the global is consumed (cleared) on read. Pattern:
