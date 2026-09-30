@@ -1,0 +1,157 @@
+// Tidy's Phase A: one genotype's snapshot, as a pure function over a single
+// iteration of the Phase A loop (Tidy.md). `below` there is `subsetMode` here.
+
+import type { Chromosome, ChromosomeLabel, Parents, SceneElement } from "../schema";
+import { CHROMOSOME_ORDER, FORM_CHROMOSOMES } from "../schema";
+import type { Point } from "./geometry";
+import { genotypeElements } from "./graph";
+
+export interface GenotypeSnapshot {
+  gid: string;
+  members: SceneElement[];
+  parents: Parents | null;
+  chromosomes: Chromosome[];
+  glyphChar: string | null;
+  center: Point;
+  originalCenter: Point;
+  width: number;
+  height: number;
+  labelText: string | null;
+  criterionText: string | null;
+  boundary: boolean;
+}
+
+export interface SnapshotResult {
+  snapshot: GenotypeSnapshot | null;
+  furniture: SceneElement[];
+  notice: string | null;
+}
+
+// v2 elements the current Tidy knows how to render (labels and criteria are
+// furniture, handled separately below).
+const RENDERABLE_KINDS = new Set(["genotype-allele", "genotype-fraction", "genotype-separator", "genotype-glyph"]);
+
+export function snapshotGenotype(
+  gid: string,
+  all: readonly SceneElement[],
+  lineage: ReadonlySet<string>,
+  subsetMode: boolean,
+): SnapshotResult {
+  const below = subsetMode;
+  const members = genotypeElements(gid, all);
+  if (members.length === 0) return { snapshot: null, furniture: [], notice: null };
+
+  const renderableMembers = members.filter((m) => RENDERABLE_KINDS.has(m.customData?.kind ?? ""));
+  if (renderableMembers.length === 0) return { snapshot: null, furniture: [], notice: null };
+
+  // Capture parents (denormalized across members).
+  let parents: Parents | null = null;
+  for (const m of members) {
+    if (m.customData?.parents) {
+      parents = m.customData.parents;
+      break;
+    }
+  }
+
+  // Read structure out of tagged elements.
+  const allelesByChromosome: Partial<Record<ChromosomeLabel, Record<string, SceneElement>>> = {};
+  let glyphChar: string | null = null;
+  for (const el of renderableMembers) {
+    const cd = el.customData;
+    if (cd?.kind === "genotype-allele") {
+      const chrom = cd.chromosome as ChromosomeLabel;
+      if (!allelesByChromosome[chrom]) allelesByChromosome[chrom] = {};
+      allelesByChromosome[chrom]![cd.side as string] = el;
+    } else if (cd?.kind === "genotype-glyph") {
+      glyphChar = el.text ?? null;
+    }
+  }
+
+  const presentChromosomes = CHROMOSOME_ORDER.filter((c) => allelesByChromosome[c]);
+  if (presentChromosomes.length === 0) {
+    return { snapshot: null, furniture: [], notice: `Genotype ${gid.slice(0, 8)} has no allele elements; skipping.` };
+  }
+
+  // X, II and III are always drawn; a genotype drawn before that rule gets
+  // its missing ones filled in as +/+.
+  const chromosomes: Chromosome[] = [];
+  const labels = CHROMOSOME_ORDER.filter((c) => (FORM_CHROMOSOMES as readonly string[]).includes(c) || allelesByChromosome[c]);
+  for (const label of labels) {
+    const a = allelesByChromosome[label];
+    if (!a) {
+      chromosomes.push({ label, kind: "het", alleles: { top: "+", bottom: "+" } });
+    } else if (a.single && !a.top && !a.bottom) {
+      chromosomes.push({ label, kind: "single", alleles: { single: a.single.text ?? "" } });
+    } else if (a.top && a.bottom) {
+      chromosomes.push({ label, kind: "het", alleles: { top: a.top.text ?? "", bottom: a.bottom.text ?? "" } });
+    } else {
+      return {
+        snapshot: null,
+        furniture: [],
+        notice: `Chromosome ${label} of genotype ${gid.slice(0, 8)} has incomplete alleles; skipping that genotype.`,
+      };
+    }
+  }
+
+  // Capture current bbox center using only the renderable members (these are
+  // what get deleted and re-created; the new layout is centered on the
+  // visual centroid of what was there).
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const m of renderableMembers) {
+    minX = Math.min(minX, m.x);
+    minY = Math.min(minY, m.y);
+    maxX = Math.max(maxX, m.x + (m.width || 0));
+    maxY = Math.max(maxY, m.y + (m.height || 0));
+  }
+  const width = maxX - minX;
+  const height = maxY - minY;
+  const center: Point = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+
+  // Capture furniture text for label and criterion before deletion (honors
+  // user edits). Label: a single text element grouped with the offspring
+  // genotype. Criterion: standalone, not in the offspring's group, keyed by
+  // childGenotypeId.
+  const labelEl = members.find((m) => m.customData?.kind === "genotype-label");
+  const labelText = labelEl ? (labelEl.originalText ?? labelEl.text ?? null) : null;
+  const criterionEl = all.find((e) => e.customData?.kind === "cross-criterion" && e.customData?.childGenotypeId === gid);
+  const criterionText = criterionEl ? (criterionEl.originalText ?? criterionEl.text ?? null) : null;
+
+  const furniture: SceneElement[] = [];
+  if (labelEl) furniture.push(labelEl);
+  // Invisible binding frames and label boxes are regenerated by render.
+  for (const m of members) {
+    if (m.customData?.kind === "genotype-frame" || m.customData?.kind === "genotype-label-box") furniture.push(m);
+  }
+  // Subset mode: a genotype whose parents are not both in the subset keeps
+  // its arrow and criterion (re-bound in Phase D).
+  const boundary =
+    below && !!parents?.maternal && !!parents?.paternal && !(lineage.has(parents.maternal) && lineage.has(parents.paternal));
+  if (criterionEl && !boundary) furniture.push(criterionEl);
+
+  // Stash a copy of the pre-Tidy center as `originalCenter`. The layout pass
+  // overwrites `center`, but the original anchors the seed genotype so Tidy
+  // is idempotent under repeated invocations.
+  const originalCenter: Point = { x: center.x, y: center.y };
+
+  return {
+    snapshot: {
+      gid,
+      members: renderableMembers,
+      parents,
+      chromosomes,
+      glyphChar,
+      center,
+      originalCenter,
+      width,
+      height,
+      labelText,
+      criterionText,
+      boundary,
+    },
+    furniture,
+    notice: null,
+  };
+}

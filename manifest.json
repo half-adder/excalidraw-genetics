@@ -1,0 +1,10 @@
+{
+  "id": "fly-genetics",
+  "name": "Fly Genetics",
+  "version": "2026.930.0",
+  "minAppVersion": "1.5.7",
+  "description": "Draw Drosophila genotypes and crossing schemes in Excalidraw drawings.",
+  "author": "half-adder",
+  "authorUrl": "https://github.com/half-adder",
+  "isDesktopOnly": false
+}

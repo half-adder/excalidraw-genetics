@@ -130,9 +130,22 @@ else
   printf 'FAIL  %-30s %5ss\n' "undo-safe-discipline" "$dt"; failed=1
   tail -n +2 <<<"$result"
 fi
+# The Vitest unit tests (npm test). No Obsidian needed.
+t0=$(now)
+unit_out=$(mktemp)
+if (cd "$TESTS/.." && npm test --silent >"$unit_out" 2>&1); then
+  printf 'PASS  %-30s %5ss\n' "unit-tests" "$(perl -e "printf '%.1f', $(now) - $t0")"
+else
+  printf 'FAIL  %-30s %5ss\n' "unit-tests" "$(perl -e "printf '%.1f', $(now) - $t0")"; failed=1
+  sed 's/^/      /' "$unit_out"
+fi
+rm -f "$unit_out"
 for t in "$TESTS"/*.sh; do
   name=$(basename "$t" .sh)
-  case "$name" in lib|run-all|make-fixtures) continue ;; esac
+  case "$name" in
+    lib|run-all|make-fixtures|capture-layout-golden) continue ;;   # tools, not tests
+    plugin-smoke) [[ "${FLY_ENGINE:-plugin}" == plugin ]] || continue ;;
+  esac
   t0=$(now)
   out=$(bash "$t" 2>&1); rc=$?
   dt=$(perl -e "printf '%.1f', $(now) - $t0")

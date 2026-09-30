@@ -12,9 +12,9 @@
 # Genotype's real (Modal-driven) commit does not settle harness.js's tracked
 # executeScriptFile promise (a pre-existing gap: no other test drives this
 # script's real modal to a commit, only its window._genotypeAuto bypass), so
-# this test invokes the untracked original executeScriptFile directly and
-# polls window._genotypeLastResult for completion instead of awaiting a
-# T.run promise. Every wait below is bounded and throws a clear error on
+# this test starts Genotype with T.launch (not awaited) and polls
+# window._genotypeLastResult for completion instead of awaiting a T.run
+# promise. Every wait below is bounded and throws a clear error on
 # timeout, and a try/finally always cancels the form (closes the modal)
 # before the harness trashes its drawing, on every exit path (pass, thrown
 # error, or timeout) -- so a stuck run can never leave a live Genotype form
@@ -30,25 +30,7 @@ try {
   window._genotypeLastResult = undefined;
   window._genotypeAuto = undefined; // force the real form, not the auto hook
 
-  const se = app.plugins.plugins['obsidian-excalidraw-plugin'].scriptEngine;
-  const genotypeFile = app.vault.getAbstractFileByPath('Excalidraw/Scripts/Genotype.md');
-  if (!genotypeFile) throw new Error('Genotype script file not found');
-  // Wait for the selection to land in Excalidraw's app state before invoking
-  // the script (mirrors harness.js's selectionLanded, which T.run normally
-  // does for us): otherwise the script can read an empty selection and open
-  // in create mode instead of editing G.
-  {
-    const want = window.__flyWant;
-    const api = F.view().targetView.excalidrawAPI;
-    const frame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
-    for (let i = 0; want && i < 60; i++) {
-      const sel = api.getAppState().selectedElementIds;
-      const n = Object.keys(sel).filter(k => sel[k]).length;
-      if (want.length ? want.every(id => sel[id]) : n === 0) break;
-      await frame();
-    }
-  }
-  (se.__flyOrig || se.executeScriptFile).call(se, F.view().targetView, genotypeFile, 'Genotype');
+  await T.launch('Genotype');
 
   let waited = 0;
   while (!window._genotypeFormModal && waited < 5000) { await new Promise(r => setTimeout(r, 50)); waited += 50; }

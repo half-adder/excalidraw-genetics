@@ -15,9 +15,14 @@
 # and waits for them to finish; F (tests/checks.js) holds the invariant checks;
 # tests/scenarios.js holds the fixture build steps. Output lines
 # containing FAIL fail the test; so does a body that records no PASS line.
-# Requires Obsidian running with a vault that has these scripts in
-# Excalidraw/Scripts. Set its path in FLY_VAULT, or put FLY_VAULT="..." in
-# ~/.config/fly-genetics/env (read automatically).
+# Requires Obsidian running with a vault that has the fly-genetics plugin
+# linked by tools/dev-install.sh (FLY_ENGINE=plugin, the default: T.run runs
+# the plugin's commands, and fixtures are built and hashed with the src/
+# files that determine what the fixture scenarios build, FIXTURE_SRC in
+# harness.js) or these scripts in Excalidraw/Scripts
+# (FLY_ENGINE=scripts, until the scripts are retired: fixtures are hashed with
+# the scripts). FLY_FROZEN=1 loads fixtures as saved, without rebuilding
+# stale ones.
 set -euo pipefail
 
 TESTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,6 +31,13 @@ REPO="$(dirname "$TESTS")"
 [[ -n "${FLY_VAULT:-}" ]] || { echo "tests: set FLY_VAULT to your vault path (or put it in ~/.config/fly-genetics/env)"; exit 2; }
 VAULT="$FLY_VAULT"
 cd "$VAULT"
+
+ENGINE="${FLY_ENGINE:-plugin}"
+# The plugin engine runs this checkout's main.js: build it once per shell.
+if [[ "$ENGINE" == plugin && -z "${FLY_BUILT:-}" ]]; then
+  (cd "$REPO" && npm run build --silent >/dev/null) || { echo "FAIL: npm run build"; exit 1; }
+  export FLY_BUILT=1
+fi
 
 ev() { obsidian eval code="$1" | sed "s/^=> //"; }
 
@@ -42,7 +54,7 @@ fly_test() {
   trap "rm -rf '$dir'" EXIT
   cat >"$dir/body.js"
   fly_load
-  ev "(()=>{window.__flyT.start({out:'$dir/out',body:'$dir/body.js',repo:'$REPO',keep:${FLY_KEEP:-0}});return 1})()" >/dev/null
+  ev "(()=>{window.__flyT.start({out:'$dir/out',body:'$dir/body.js',repo:'$REPO',keep:${FLY_KEEP:-0},engine:'$ENGINE',frozen:${FLY_FROZEN:-0}});return 1})()" >/dev/null
   local i
   for ((i = 0; i < 6000; i++)); do   # up to 5 minutes (a first run may build fixtures)
     [[ -f "$dir/out" ]] && grep -q '^END$' "$dir/out" && break

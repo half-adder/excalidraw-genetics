@@ -1,0 +1,222 @@
+/* Fly Genetics form styles (see src/forms). */
+
+/* Genotype form (src/forms/genotype-form.ts). Declarations are the scripts'
+   inline cssText, unchanged; selectors are scoped to the form's modal so
+   they win over the theme's button and input rules as the inline styles did. */
+.fly-genotype-form .fly-genotype-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: center;
+}
+.fly-genotype-form .fly-glyph-column {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 28px;
+}
+.fly-genotype-form button.fly-glyph-button {
+  height: 24px;
+  padding: 0 10px;
+}
+.fly-genotype-form button.fly-glyph-symbol {
+  font-size: 16px;
+}
+.fly-genotype-form .fly-genotype-grid {
+  display: grid;
+  grid-template-columns: auto auto auto auto auto;
+  column-gap: 8px;
+  row-gap: 6px;
+  justify-content: center;
+  align-items: center;
+}
+.fly-genotype-form .fly-chromosome {
+  grid-row: 1 / span 4;
+  display: grid;
+  grid-template-rows: auto auto 2px auto;
+  row-gap: 6px;
+  justify-items: center;
+  position: relative;
+}
+.fly-genotype-form .fly-chromosome-header {
+  grid-row: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.fly-genotype-form .fly-chromosome-name {
+  font-weight: 600;
+}
+.fly-genotype-form button.fly-flip-button {
+  position: absolute;
+  right: -2px;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0 3px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.fly-genotype-form .fly-chromosome-separator {
+  grid-row: 1 / span 4;
+  font-size: 1.6em;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+.fly-genotype-form .fly-fraction-bar {
+  grid-row: 3;
+  width: 100%;
+  height: 2px;
+  background: var(--text-normal);
+}
+.fly-genotype-form .fly-offspring-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: flex-start;
+  margin-top: 14px;
+}
+.fly-genotype-form input.fly-label-input {
+  width: 200px;
+}
+.fly-genotype-form textarea.fly-criterion-input {
+  width: 240px;
+  resize: vertical;
+}
+.fly-genotype-form .fly-form-warning {
+  color: var(--text-error);
+  margin-top: 8px;
+  min-height: 1.2em;
+}
+.fly-genotype-form .fly-form-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Cross Genotypes picker (src/forms/cross-picker.ts). Declarations are the
+   script's inline cssText, unchanged; scoped to the picker's modal as the
+   Genotype form's are. */
+.fly-cross-picker .fly-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+.fly-cross-picker .fly-picker-times {
+  font-size: 1.4em;
+}
+.fly-cross-picker .fly-picker-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-top: 8px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+.fly-cross-picker .fly-picker-preview-title {
+  font-size: 0.8em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.fly-cross-picker .fly-picker-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: center;
+}
+.fly-cross-picker .fly-picker-sex {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 26px;
+}
+.fly-cross-picker button.fly-glyph-button {
+  height: 24px;
+  padding: 0 10px;
+}
+.fly-cross-picker button.fly-glyph-symbol {
+  font-size: 16px;
+}
+.fly-cross-picker .fly-picker-grid {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.fly-cross-picker .fly-picker-column {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.fly-cross-picker .fly-picker-column-header {
+  text-align: center;
+  font-weight: 600;
+  height: 22px;
+}
+.fly-cross-picker .fly-picker-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  outline: none;
+  padding: 2px;
+  border-radius: 6px;
+}
+.fly-cross-picker .fly-picker-separator {
+  font-size: 1.6em;
+  font-weight: 600;
+  margin-top: 40px;
+}
+.fly-cross-picker .fly-picker-extras {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 14px;
+  align-items: flex-start;
+}
+.fly-cross-picker .fly-form-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 12px;
+}
+.fly-cross-picker .fly-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--background-modifier-border);
+}
+.fly-cross-picker .fly-card.is-selected {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+.fly-cross-picker .fly-card-bar {
+  height: 2px;
+  align-self: stretch;
+  margin: 2px 0;
+  background: currentColor;
+}
+.fly-cross-picker .fly-mini {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fly-cross-picker .fly-mini-fraction {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.fly-cross-picker .fly-mini-bar {
+  height: 1.5px;
+  align-self: stretch;
+  margin: 1px 0;
+  background: currentColor;
+}

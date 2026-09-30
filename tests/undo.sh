@@ -44,6 +44,9 @@
 source "$(dirname "$0")/lib.sh"
 fly_test <<'JS'
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// The view's open operation: the plugin keeps its own registry (read through
+// plugin.testing), the scripts theirs in window._flyOperations.
+const opOf = v => T.engine === 'plugin' ? app.plugins.plugins['fly-genetics'].testing.openOperation(v) : window._flyOperations?.get(v);
 const IGNORE = ['version', 'versionNonce', 'updated'];
 // boundElements is compared as a set of {id, type} references: Excalidraw's
 // undo merges it by id and appends a reference it brings back.
@@ -215,7 +218,7 @@ async function crossModeLine(m, f, auto) {
     cancel.click();
   }
   if (!await until(() => window._crossGenotypesLastResult !== undefined)) throw new Error('Cross Mode: no cross');
-  await until(() => !window._flyOperations?.get(view), 10000);
+  await until(() => !opOf(view), 10000);
   await sleep(200);
   if (auto) await until(() => !window._flyCrossMode, 4000);
   window._flyCrossMode?.stop();
@@ -300,15 +303,23 @@ await checkCancel('Cross Genotypes (cancelled)', 'backcross', async () => {
 await checkCancel('Cross Mode (cancelled)', 'backcross', () => crossModeLine('P1', 'P2', null));
 
 // ---- Failures: a script throws; what it changed is put back -------------------
-// Snapshots the scene when `name` starts (through the Script Engine).
+// Snapshots the scene when `name` starts (through the Script Engine, or on
+// the plugin engine through plugin.testing.run, where ctx.start registers a
+// started command).
 function sceneWhenStarts(name) {
-  const se = app.plugins.plugins['obsidian-excalidraw-plugin'].scriptEngine, inner = se.executeScriptFile;
   const box = {};
+  if (T.engine === 'plugin') {
+    const testing = app.plugins.plugins['fly-genetics'].testing, inner = testing.run;
+    testing.run = function (n, ...r) { if (n === name && !box.scene) box.scene = scene(); return inner.call(this, n, ...r); };
+    box.restore = () => { delete testing.run; };
+    return box;
+  }
+  const se = app.plugins.plugins['obsidian-excalidraw-plugin'].scriptEngine, inner = se.executeScriptFile;
   se.executeScriptFile = function (v, f, n, ...r) { if ((n ?? f?.basename) === name && !box.scene) box.scene = scene(); return inner.call(this, v, f, n, ...r); };
   box.restore = () => { se.executeScriptFile = inner; };
   return box;
 }
-const opOpen = () => !!window._flyOperations?.get(F.view().targetView);
+const opOpen = () => !!opOf(F.view().targetView);
 
 {
   const what = 'Tidy fails after its delete (in a cross)';
@@ -453,7 +464,7 @@ async function inOtherDrawing(what, during) {
   };
   try {
     await during(open);
-    await until(() => !window._flyOperations?.get(leaf.view), 5000);
+    await until(() => !opOf(leaf.view), 5000);
     await sleep(300);
     if (sceneB) {
       afterB = liveOf();
@@ -472,7 +483,7 @@ async function inOtherDrawing(what, during) {
     }
     for (const p of [B, B.replace(/\.md$/, '.svg'), 'Excalidraw/_test-undo-other.svg']) {
       const f = app.vault.getAbstractFileByPath(p);
-      if (f) try { await app.vault.trash(f, true); } catch (e) {}
+      if (f) try { await app.vault.delete(f); } catch (e) {}
     }
   }
   T.pass(sameView, what + ': the tab reused the view for the other drawing', what + ': the view was not reused');
@@ -507,7 +518,7 @@ async function crossModeThenSwitch(what, button) {
     T.pass(opOpen(), what + ': an operation is open (a genotype created, picker open)', what + ': no open operation');
     await open();
     find(button).click();
-    await until(() => window._crossGenotypesLastResult !== undefined || !window._flyOperations?.get(view), 5000);
+    await until(() => window._crossGenotypesLastResult !== undefined || !opOf(view), 5000);
   });
 }
 await crossModeThenSwitch('Tab switched, picker then cancelled', 'Cancel');

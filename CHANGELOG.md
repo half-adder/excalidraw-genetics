@@ -1,6 +1,15 @@
 # Changelog
 
-Versions are release dates (`YYYY.M.D`, with `.2`, `.3` for more releases on the same day).
+Versions are release dates. The plugin uses Obsidian's required numeric form, `YYYY.MDD.N` (month and zero-padded day run together, `N` counts releases the same day from 0); older sections below, from before the plugin, keep their `YYYY.M.D` form (`.2`, `.3` for more releases the same day).
+
+## 2026.930.0
+
+Fly Genetics is now an Obsidian plugin. The commands are the same as the scripts', and drawings need no conversion.
+
+- Install: in Obsidian, install and enable the Excalidraw (2.20.2 or newer) and BRAT community plugins. In Settings → BRAT → Beta plugin list, choose "Add beta plugin", enter `half-adder/excalidraw-genetics`, then enable Fly Genetics in Settings → Community plugins. BRAT keeps it updated from then on.
+- On first start the plugin offers to set up the Computer Modern font (already done if you ran the installer), and, if you used the scripts, offers to move the old script files to the trash so each command doesn't appear twice. Only unedited installer files are preselected, and nothing is trashed until you click "Move to trash".
+- Hotkeys set on the old script commands must be assigned again: Settings → Hotkeys, search "Fly Genetics".
+- The scripts and "Update Fly Genetics" still work for now but will not get new features.
 
 ## 2026.9.30
 

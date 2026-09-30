@@ -23,14 +23,14 @@ Verify the reload before trusting a test result (e.g. expose a new value on a wi
 
 ## Test canvas
 
-Never iterate against the user's working drawings. Prefer a **throwaway drawing** per test run: create it with `ea.create({filename:'_test-...', foldername:'Excalidraw', onNewPane:true})`, and when done detach its leaf and `app.vault.trash()` both the `.excalidraw.md` and its auto-exported `.excalidraw.svg` (see `tests/tidy-sibling-order.sh`). The user also experiments on `Excalidraw/_test-scratch.md`, so check what is on it (and whether a script modal of theirs is open) before using it, and close only modals you opened.
+Never iterate against the user's working drawings. Prefer a **throwaway drawing** per test run: create it with `ea.create({filename:'_test-...', foldername:'Excalidraw', onNewPane:true})`, and when done detach its leaf and `app.vault.delete()` the fixed throwaway paths: the `.excalidraw.md` and its auto-exported `.excalidraw.svg` (see `trashDrawing` in `tests/harness.js`). Tests must never use the system trash (`app.vault.trash()`, `adapter.trashSystem`, `fileManager.trashFile`): delete only the paths the test itself created. The user also experiments on `Excalidraw/_test-scratch.md`, so check what is on it (and whether a script modal of theirs is open) before using it, and close only modals you opened.
 
 Gotchas:
 - `editor:undo` is the Markdown editor's command and does not reach Excalidraw. To undo, dispatch a `keydown` (`key: "z"`, `metaKey: true`) on the view's `.excalidraw` container.
 - `obsidian eval` prefixes its output with `=> `; strip it before comparing results in shell.
 - Deselecting via `updateScene({appState:{selectedElementIds:{}}})` can lag; clear `selectedGroupIds` too and confirm `ea.getViewSelectedElements().length === 0` before running a script whose behavior depends on the selection (e.g. Tidy).
 
-## Test loop
+## Test loop (scripts, until they are retired)
 
 Scripts cannot be unit-tested in isolation. They run inside the Excalidraw plugin against a live Excalidraw view. The reliable pattern:
 
@@ -42,6 +42,22 @@ Scripts cannot be unit-tested in isolation. They run inside the Excalidraw plugi
 2. Test logic via `obsidian eval` (use a temp-file payload for anything past one statement). See `references/testing-loop.md` in the excalidraw-scripting skill.
 3. For end-to-end tests including `utils.suggester` / `utils.inputPrompt`, invoke via the Script Engine: `obsidian command id="obsidian-excalidraw-plugin:<Script Title>"`. Modals cannot be answered from the CLI, so combine with the **agentic test hook** pattern below for unattended runs.
 4. Visual check: `obsidian dev:screenshot path=/tmp/x.png && sleep 1` (the PNG is written asynchronously) then `Read` the PNG.
+
+## Plugin test loop (the default engine)
+
+The `fly-genetics` plugin (`src/`, TypeScript, bundled to `main.js` by esbuild) is what the tests run by default. The loop:
+
+1. `npm run build` (type check and bundle), then `tools/dev-install.sh` once per vault (links `main.js`, `manifest.json`, `styles.css` into `$FLY_VAULT/.obsidian/plugins/fly-genetics` and enables the plugin).
+2. After each build: `obsidian plugin:reload id=fly-genetics` (never reload Obsidian itself). The harness also reloads the plugin on its own when `main.js` changed.
+3. `obsidian dev:errors` shows errors Obsidian captured; a command that throws is also recorded in `plugin.testing.errors`, which fails the Obsidian-driven tests.
+4. `npm test` runs the Vitest unit tests (`tests/unit/`); `tests/<name>.sh` runs one Obsidian-driven test; `tests/run-all.sh` runs the unit tests and every Obsidian-driven test (slow).
+
+Test engine switches (`tests/lib.sh`):
+- `FLY_ENGINE=plugin` (default): `T.run` runs the plugin's commands; `lib.sh` runs `npm run build` first. Fixtures are hashed from the `src/` files that determine what the Genotype, Cross Genotypes and Tidy commands build (`FIXTURE_SRC` in `tests/harness.js`), not all of `main.js`, so unrelated plugin changes (migration, font-offer, other commands) don't mark them stale. A change to one of those files makes fixtures stale and the next test that loads one rebuilds it (commit the rebuilt fixtures).
+- `FLY_ENGINE=scripts`: runs the Script Engine scripts in the vault (symlinks into `~/code/excalidraw-genetics/scripts`) and hashes fixtures with the scripts. Kept until the scripts are retired; before using it, confirm that checkout is on `main` with `git -C ~/code/excalidraw-genetics status --short scripts` empty, and set `FLY_FROZEN=1` too (the committed fixtures are plugin-built, so without it the scripts engine rebuilds them). The scripts' installer and updater (`tests/installer.sh`, `tests/updater.sh`) always run as scripts.
+- `FLY_FROZEN=1`: loads fixtures as saved, without rebuilding stale ones (to run one engine on fixtures the other built).
+
+The test and interop globals (`window._genotypeAuto`, `_crossGenotypesAuto`, `_genotypeCreateAt`, ...) keep the scripts' names and shapes and are read through `take` and `put` in `src/hooks.ts`. Every scene write in the plugin goes through `src/operation` (the undo-safe transaction below, ported): commands get an `OperationContext` and use `ctx.commit()`, `ctx.commitPatches()`, `ctx.deleteElements()`, `ctx.selectElements()` and `ctx.setAppState()`, and start child commands with `ctx.start()` (the scripts' `flyStart`: the child joins the operation, and its failure is put back and reported under its own name). `ctx.join()` awaits the child and turns its failure into the parent's error (so the parent's own changes are put back too); use it only for a child whose failure must fail the parent. No command needs that today. `tests/unit/write-guard.test.ts` fails if any file outside `src/operation/` names a scene or undo-stack write (`updateScene`, `addElementsToView`, `deleteViewElements`, `mutateElement`, `history` and the others listed there).
 
 ## Undo-safe operations (rule for every scene change)
 
@@ -99,13 +115,13 @@ See `README.md` for the v1 customData schema, shorthand syntax, and roadmap. See
 
 The public repo (github.com/half-adder/excalidraw-genetics) has its own history: the orphan branch `public`, pushed as its `main` (remote `public`). Private history on `main` is never pushed (older commits mention unpublished research).
 
-Versions are release dates: `VERSION` holds `YYYY.M.D` (append `.2`, `.3` for more releases the same day). The installer also carries a content fingerprint; the updater compares fingerprints, so a missed `VERSION` bump still reaches everyone. `CHANGELOG.md` sections become the updater's "What's new".
+Versions are release dates in the form `YYYY.MDD.N`: year, month and two-digit day, then a release counter from 0 (`2026.929.0`, `2026.929.1` later the same day, `2026.1001.0` on October 1). `node tools/set-version.mjs` computes today's next one from `versions.json`.
 
 To release:
 
-1. On `main`: set `VERSION` to today's date, add a `## <version>` section at the top of `CHANGELOG.md`, commit.
-2. `tests/run-all.sh` must pass; `uv run installer/build.py`; commit `dist/`.
-3. `git status` must be clean (regenerating GIFs or running tests can rebuild fixtures; commit them). Then `tools/scan.sh`: checks tracked files and the text inside the built installer against the maintainer's private blocklist (kept outside the repo); it must PASS.
-4. `git switch public && git rm -rq . && git checkout main -- . && git commit -m "Release <version>" && git push public public:main`, then `git tag v<version> && git push public v<version>` and `gh release create v<version> --repo half-adder/excalidraw-genetics --title <version> --notes "<that CHANGELOG section>"`; `git switch main`.
+1. On `main`: `node tools/set-version.mjs` (prints the version), add a `## <version>` section at the top of `CHANGELOG.md`, commit.
+2. `npm test` and `tests/run-all.sh` must pass; `npm run build`; while the scripts still ship, `uv run installer/build.py` and commit `dist/`.
+3. `git status` must be clean. Then `tools/scan.sh` must PASS.
+4. `git switch public && git rm -rq . && git checkout main -- . && git commit -m "Release <version>" && git push public public:main`, then `git tag v<version> && git push public v<version>` and `gh release create v<version> --repo half-adder/excalidraw-genetics --title <version> --notes "<that CHANGELOG section>" main.js manifest.json styles.css`; `git switch main`.
 
-Labmates update with the "Update Fly Genetics" command, which fetches `dist/Install Fly Genetics.md` from the public `main`.
+Labmates install and update through BRAT from the releases (`main.js`, `manifest.json`, `styles.css` assets); `manifest.json` and `versions.json` are at the repository root. Older `CHANGELOG.md` headings keep their `YYYY.M.D` form.

@@ -1,8 +1,8 @@
 # excalidraw-genetics
 
-Excalidraw Script Engine scripts for drawing *Drosophila* genotypes and crossing schemes in Obsidian, in a LaTeX-like look (Computer Modern), without typing LaTeX.
+An Obsidian plugin for drawing *Drosophila* genotypes and crossing schemes in Excalidraw, in a LaTeX-like look (Computer Modern), without typing LaTeX.
 
-Each genotype is drawn as native Excalidraw elements (allele text, fraction lines, `;` separators, optional sex glyph), grouped, and tagged with a stable `genotypeId` in `customData`, so the scripts can find and redraw a genotype no matter how it has been moved or edited.
+Each genotype is drawn as native Excalidraw elements (allele text, fraction lines, `;` separators, optional sex glyph), grouped, and tagged with a stable `genotypeId` in `customData`, so the plugin can find and redraw a genotype no matter how it has been moved or edited.
 
 ## Tour
 
@@ -30,9 +30,9 @@ Each genotype is drawn as native Excalidraw elements (allele text, fraction line
 
 ![Break Cross, then undo](docs/media/break-cross.gif)
 
-## Scripts
+## Commands
 
-| Script | What it does |
+| Command | What it does |
 |---|---|
 | `Genotype` | Form for creating or editing one genotype: sex-symbol column plus a text field per homolog, laid out like the genotype (`X ; II ; III`, top over bottom). With a genotype selected it edits it in place (one undo step); for an offspring it also edits its label and selection criterion. With nothing selected it creates one at the nearest free spot to the view center. Option+F flips a chromosome (swaps its top and bottom text): the one under the mouse, or, with no hover, the one whose field has focus (focus then follows the text); a small `⇅` button beside each chromosome's header does the same on click. A chromosome carrying `Y` never flips. See `docs/plans/2026-09-28-genotype-form-editor-design.md`. |
 | `Cross Genotypes` | Select two genotypes and pick the offspring: one card per distinct maternal × paternal homolog pair for each chromosome (identical cards, and cards that differ only in which parent gave which homolog, are merged), with the offspring sex linked to the X card (`Y` = male, XX = female, "or Y" = both sexes), a live preview, and optional label and multi-line selection criterion. Press F to flip a card (swap top and bottom, also selecting it); X cards that carry a Y never flip. Draws the offspring, the `x`, a bound elbow lineage arrow (the criterion rides on it as an arrow label), then runs Tidy. See `docs/plans/2026-09-28-cross-picker-design.md`. |
@@ -41,45 +41,34 @@ Each genotype is drawn as native Excalidraw elements (allele text, fraction line
 | `Tidy Below` | Tidies the selected genotype and everything below it (its descendants and their mates); everything above stays put. |
 | `Select Lineage` / `Select Below` | Select a genotype's whole lineage, or it and everything below it, with the `x` glyphs, arrows and labels in between, ready to drag. |
 | `Break Cross` | Select an offspring to detach it from its parents, or the `x` (or both parents) to break the whole cross. Removes the `x`, lineage arrows and criteria involved; never deletes a genotype. One undo restores it. |
-| `Update Fly Genetics` | Checks GitHub for a newer version and runs the latest installer. Installed by the installer. |
 
-Every command is one undo step (Cmd+Z), including what it runs for you: a cross and the Tidy after it, Tidy Below's Select Below and Tidy, or a Cross Mode line with the genotypes and cross it makes. Cancelling a command's form records nothing, unless the command had already changed the drawing before the form opened (for example, turning a copied genotype into its own); then that change is its one undo step. All scripts live in `scripts/` and run from the command palette. Suggested hotkeys (Settings → Hotkeys; the installer does not set them): Genotype, Cross Genotypes, Cross Mode (Shift+9), Tidy, Tidy Below, Select Below.
+Every command is one undo step (Cmd+Z), including what it runs for you: a cross and the Tidy after it, Tidy Below's Select Below and Tidy, or a Cross Mode line with the genotypes and cross it makes. Cancelling a command's form records nothing, unless the command had already changed the drawing before the form opened (for example, turning a copied genotype into its own); then that change is its one undo step. Commands run from the command palette; they have no hotkeys by default, so assign your own in Settings → Hotkeys (search "Fly Genetics"). Suggested: Genotype, Cross Genotypes, Cross Mode (Shift+9), Tidy, Tidy Below, Select Below.
 
 ## Install (labmates)
 
-1. In Obsidian, install and enable the **Excalidraw** community plugin (version 2.20.2 or newer).
-2. Download `dist/Install Fly Genetics.md` (one file, about 1 MB).
-3. Put it in your Excalidraw script folder: Settings → Excalidraw → Basic → Files and folders → Excalidraw Automate script folder (default `Excalidraw/Scripts`).
-4. Open the command palette (Cmd/Ctrl+P) and run **Install Fly Genetics**.
-
-The installer writes the scripts into your script folder, writes the Computer Modern font (and its SIL Open Font License) to `Excalidraw/Fonts/`, and turns on Excalidraw's local font with it. It asks before replacing a different local font you already use. It does not touch hotkeys.
-
-**Updating:** run **Update Fly Genetics** from the command palette. It downloads the latest installer from this repository and runs it. Scripts you have not edited are replaced silently; if you have edited one, it asks first. (The installer keeps a small `.fly-genetics.json` in the script folder to tell the two apart.)
+1. In Obsidian, install and enable the **Excalidraw** community plugin (2.20.2 or newer) and the **BRAT** community plugin.
+2. Settings → BRAT → Beta plugin list → **Add beta plugin**, enter `half-adder/excalidraw-genetics`, and add it. Enable **Fly Genetics** in Settings → Community plugins.
+3. On first start Fly Genetics offers to set up the Computer Modern font (it writes the font and its SIL Open Font License to `Excalidraw/Fonts/` and turns on Excalidraw's local font with it, asking before replacing a different local font), and, if you used the scripts, offers to move the old installer's script files to the trash so each command does not appear twice. Only files whose content still matches what the installer wrote are preselected; an edited or unrelated file is listed but left unchecked. Nothing is trashed without an explicit "Move to trash" click. Drawings need no conversion.
+4. Updates: BRAT checks for new versions at startup (its "Auto-update plugins at startup" setting) or when you run "BRAT: Check for updates to all beta plugins".
 
 Notes:
-- Excalidraw has one local-font slot per vault; the installer asks before taking it over.
+- Excalidraw has one local-font slot per vault; the plugin asks before taking it over.
 - Drawings look the same for everyone who has the font set up. Without it, genotypes fall back to Excalidraw's default font but stay fully editable.
+- Hotkeys: the plugin's commands have new ids, so hotkeys set on the old script commands must be assigned again (Settings → Hotkeys, search "Fly Genetics").
 
 ## Install (development)
 
-Symlink the scripts into your vault's script folder so edits in this repo are used directly:
-
 ```bash
-for s in Genotype "Cross Genotypes" "Cross Mode" Tidy "Tidy Below" "Select Lineage" "Select Below" "Break Cross"; do
-  ln -s ~/code/excalidraw-genetics/scripts/"$s.md" "/path/to/vault/Excalidraw/Scripts/$s.md"
-done
+npm install
+npm run build   # or: npm run dev
+tools/dev-install.sh
 ```
 
-The Excalidraw Script Engine caches scripts that change outside Obsidian; see `CLAUDE.md` for how to reload them. Rebuild the installer after changing a script:
-
-```bash
-uv run installer/build.py   # writes dist/Install Fly Genetics.md
-docs/media/make-media.sh    # regenerates the README GIFs (about a minute)
-```
+After a rebuild: `obsidian plugin:reload id=fly-genetics`.
 
 ## Tests
 
-Scripts run inside a live Excalidraw view, so tests drive Obsidian through the `obsidian` CLI in a throwaway drawing and clean it up afterwards. Each prints `PASS`/`FAIL` and exits 0 on PASS.
+Commands run inside a live Excalidraw view, so most tests drive Obsidian through the `obsidian` CLI in a throwaway drawing and clean it up afterwards. Each prints `PASS`/`FAIL` and exits 0 on PASS. By default they run the plugin's own commands, built from this checkout; set `FLY_ENGINE=scripts` to run them against the older Excalidraw/Scripts engine instead. `npm test` runs the Vitest unit tests (no Obsidian needed). `tests/run-all.sh` runs everything, including `npm test`, one after another.
 
 - `tests/tidy-invariants.sh [drawing]`: on a copy of a real drawing, Tidy leaves no overlaps, no genotype on another cross's `x`, one bound arrow per offspring, and a second Tidy moves nothing.
 - `tests/tidy-sibling-order.sh`: siblings keep the user's left-to-right order.
@@ -91,6 +80,11 @@ Scripts run inside a live Excalidraw view, so tests drive Obsidian through the `
 - `tests/genotype-label-criterion.sh`: editing an offspring's label and criterion in the Genotype form.
 - `tests/genotype-form-flip.sh`: Option+F and the `⇅` button flip a chromosome in the Genotype form; a `Y`-bearing chromosome never flips.
 - `tests/cross-mode-esc.sh`: Esc leaves Cross Mode.
+- `tests/undo.sh`: every command is undone by one undo and redone by one redo, element for element.
+- `tests/select.sh`: Select Below and Select Lineage pick the right genotypes and cross furniture.
+- `tests/migration.sh`: the first-load offer to trash the old installer's scripts, including which files get preselected.
+- `tests/font-setup.sh`: the first-load font setup offer.
+- `tests/plugin-smoke.sh`: the plugin engine itself, that all eight commands are registered and available.
 
 They take minutes each (they drive a live Obsidian); run them one at a time, not in parallel.
 
@@ -126,4 +120,4 @@ Cross Builder (the earlier keyboard-driven sidepanel) and the schema v3 plans ar
 
 ## License
 
-Scripts: MIT (see `LICENSE`). The bundled Computer Modern Serif font (`fonts/cmu-serif-500-roman.ttf`) is under the SIL Open Font License (`fonts/CMU-OFL.txt`).
+Plugin and scripts: MIT (see `LICENSE`). The bundled Computer Modern Serif font (`fonts/cmu-serif-500-roman.ttf`) is under the SIL Open Font License (`fonts/CMU-OFL.txt`).
